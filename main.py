@@ -10,6 +10,7 @@ from config import get_default_plot_config, get_default_simulation_config
 from scenarios import get_predefined_scenarios
 from simulation import HierarchicalFuzzyADASController, run_simulation
 from utils import ensure_directory, print_scenario_report
+from visualization.live_simulation import show_live_simulation
 from visualization.scenario_plots import plot_scenario_comparison, plot_scenario_timeseries
 
 
@@ -34,6 +35,11 @@ def build_argument_parser(scenario_names: Sequence[str]) -> argparse.ArgumentPar
         "--skip-plots",
         action="store_true",
         help="Run scenarios without saving plots.",
+    )
+    parser.add_argument(
+        "--no-live",
+        action="store_true",
+        help="Disable the live simulation window for single-scenario runs.",
     )
     parser.add_argument(
         "--output-dir",
@@ -121,6 +127,10 @@ def main() -> None:
 
     if not args.skip_plots and len(results) > 1:
         plot_scenario_comparison(results, output_dir, plot_config)
+
+    if not args.no_live and len(results) == 1:
+        only_result = next(iter(results.values()))
+        show_live_simulation(only_result, plot_config)
 
     if args.skip_plots:
         print("-" * 88)

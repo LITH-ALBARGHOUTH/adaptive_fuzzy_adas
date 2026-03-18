@@ -1,12 +1,14 @@
 """Visualization helpers for the hierarchical fuzzy ADAS project."""
 
 from .defuzzification_plot import plot_example_defuzzifications
+from .live_simulation import show_live_simulation
 from .membership_plots import plot_all_memberships, plot_membership_sensitivity
 from .rule_activation import plot_rule_activation_overview
 from .scenario_plots import plot_scenario_comparison, plot_scenario_timeseries
 from .surface_plots import plot_collision_risk_surface, plot_meta_brake_contour
 
 __all__ = [
+    "show_live_simulation",
     "plot_all_memberships",
     "plot_membership_sensitivity",
     "plot_rule_activation_overview",
