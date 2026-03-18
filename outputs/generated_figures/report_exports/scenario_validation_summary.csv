@@ -1,8 +1,0 @@
-scenario,expected_behavior,final_speed,minimum_distance,max_risk,rms_lane_deviation,peak_brake,peak_throttle,peak_abs_steering,collision,lane_departure,overall_pass
-normal_driving,"Low-risk, comfort-oriented cruising with only light braking.",21.9753,45.0,33.372,0.0331,0.1821,0.6655,0.03,False,False,True
-high_speed_short_distance,Safety-dominant braking should emerge while avoiding collision.,7.6906,15.9779,75.9071,0.0254,0.8372,0.25,0.0,False,False,True
-large_lane_deviation,Strong lateral correction should dominate without leaving the lane.,21.3296,59.7764,33.366,0.2155,0.4027,0.6668,0.7983,False,False,True
-poor_road_condition,Road degradation should raise risk and moderate throttle usage.,15.2641,37.0333,59.1859,0.0183,0.1963,0.25,0.3181,False,False,True
-conflicting_tradeoff,Competing objectives should produce both notable braking and steering activity.,11.4169,20.1671,74.4602,0.1825,0.7495,0.25,0.5301,False,False,True
-boundary_stop_and_go,The controller should remain stable at low speed and come close to a stop if needed.,0.0,9.7724,59.5858,0.0,0.1954,0.2115,0.0,False,False,True
-boundary_open_road,Open-road comfort bias should keep throttle healthy and braking light.,37.4464,39.1468,59.2006,0.015,0.1811,0.6183,0.2832,False,False,True

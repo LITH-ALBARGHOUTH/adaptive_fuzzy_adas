@@ -75,8 +75,7 @@ Run all scenarios:
 python3 main.py
 ```
 
-The default run now generates both scenario plots and a fuzzy-logic report bundle
-under `outputs/generated_figures/` and `outputs/generated_figures/report_exports/`.
+The default run generates scenario plots under `outputs/generated_figures/`.
 
 Run a single scenario:
 
@@ -88,12 +87,6 @@ Run scenarios without saving plots:
 
 ```bash
 python3 main.py --skip-plots
-```
-
-Skip the additional report-oriented fuzzy exports if you only want the scenario plots:
-
-```bash
-python3 main.py --skip-report-bundle
 ```
 
 Run the required interactive one-shot evaluation mode:
@@ -152,19 +145,6 @@ Plots are written to:
 ```text
 outputs/generated_figures/
 ```
-
-Additional report-oriented exports are written to:
-
-```text
-outputs/generated_figures/report_exports/
-```
-
-These exports include:
-
-- numbered fuzzy rule tables in Markdown and CSV
-- conflict-oriented rule examples
-- expected-vs-actual scenario validation tables
-- a report artifact manifest
 
 ## Project Layout
 

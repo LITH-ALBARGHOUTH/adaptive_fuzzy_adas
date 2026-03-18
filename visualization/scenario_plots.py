@@ -12,6 +12,21 @@ from utils import SimulationResult
 from visualization.plot_style import apply_plot_style, style_axis
 
 
+def _scenario_label(name: str) -> str:
+    """Shorten scenario names for crowded legends."""
+
+    labels = {
+        "normal_driving": "normal",
+        "high_speed_short_distance": "high-speed short-gap",
+        "large_lane_deviation": "large lane dev",
+        "poor_road_condition": "poor road",
+        "conflicting_tradeoff": "tradeoff",
+        "boundary_stop_and_go": "stop-go",
+        "boundary_open_road": "open road",
+    }
+    return labels.get(name, name.replace("_", " "))
+
+
 def plot_scenario_timeseries(
     result: SimulationResult,
     output_dir: Path,
@@ -84,7 +99,7 @@ def plot_scenario_comparison(
     """Generate an optional comparison plot across multiple scenarios."""
 
     apply_plot_style(plot_config)
-    figure, axes = plt.subplots(2, 2, figsize=(14, 10), sharex=False)
+    figure, axes = plt.subplots(2, 2, figsize=(16, 11), sharex=False)
     axes = axes.flatten()
 
     for scenario_name, result in results.items():
@@ -94,10 +109,11 @@ def plot_scenario_comparison(
         risk = [record.subsystem_outputs["risk"] for record in result.records]
         lane = [record.sensor_inputs["lane_deviation"] for record in result.records]
 
-        axes[0].plot(time, speed, label=scenario_name)
-        axes[1].plot(time, distance, label=scenario_name)
-        axes[2].plot(time, risk, label=scenario_name)
-        axes[3].plot(time, lane, label=scenario_name)
+        label = _scenario_label(scenario_name)
+        axes[0].plot(time, speed, label=label)
+        axes[1].plot(time, distance, label=label)
+        axes[2].plot(time, risk, label=label)
+        axes[3].plot(time, lane, label=label)
 
     axes[0].set_title("Speed Comparison")
     axes[0].set_ylabel("speed (m/s)")
@@ -110,11 +126,11 @@ def plot_scenario_comparison(
 
     for axis in axes:
         axis.set_xlabel("time (s)")
-        axis.legend(fontsize=plot_config.legend_font_size)
+        axis.legend(fontsize=plot_config.legend_font_size, loc="best", framealpha=0.92)
         axis.grid(alpha=0.25)
         style_axis(axis, plot_config)
 
-    figure.tight_layout(pad=1.3)
+    figure.tight_layout(pad=1.8, w_pad=1.8, h_pad=1.8)
     output_path = output_dir / "scenario_comparison.png"
     figure.savefig(output_path, dpi=plot_config.dpi)
     plt.close(figure)
