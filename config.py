@@ -59,9 +59,14 @@ class SimulationConfig:
 class PlotConfig:
     """Plot-generation parameters."""
 
-    dpi: int = 140
-    figure_size: Tuple[float, float] = (14.0, 16.0)
+    dpi: int = 190
+    figure_size: Tuple[float, float] = (15.0, 18.0)
     surface_grid_points: int = 31
+    title_font_size: int = 18
+    label_font_size: int = 14
+    tick_font_size: int = 12
+    legend_font_size: int = 11
+    annotation_font_size: int = 12
 
 
 def _speed_config(name: str = "speed") -> VariableConfig:

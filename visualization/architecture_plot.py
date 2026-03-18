@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
 
 from config import PlotConfig
+from visualization.plot_style import apply_plot_style
 
 
 def _box(ax, xy, width, height, label, facecolor):
@@ -48,6 +49,7 @@ def _arrow(ax, start, end):
 def plot_system_architecture_diagram(output_dir: Path, plot_config: PlotConfig) -> None:
     """Generate a block diagram for the hierarchical fuzzy controller."""
 
+    apply_plot_style(plot_config)
     fig, ax = plt.subplots(figsize=(12, 7))
     ax.set_xlim(0.0, 1.0)
     ax.set_ylim(0.0, 1.0)
@@ -76,15 +78,22 @@ def plot_system_architecture_diagram(output_dir: Path, plot_config: PlotConfig) 
     _arrow(ax, (0.86, 0.51), (0.88, 0.51))
     _arrow(ax, (0.93, 0.42), (0.15, 0.40))
 
-    ax.text(0.52, 0.93, "Hierarchical Fuzzy ADAS Architecture", ha="center", fontsize=15, weight="bold")
+    ax.text(
+        0.52,
+        0.93,
+        "Hierarchical Fuzzy ADAS Architecture",
+        ha="center",
+        fontsize=plot_config.title_font_size,
+        weight="bold",
+    )
     ax.text(
         0.53,
         0.07,
         "Closed-loop flow: sensor inputs -> subsystem fuzzification/inference -> meta arbitration -> vehicle response -> new inputs",
         ha="center",
-        fontsize=10,
+        fontsize=plot_config.annotation_font_size,
     )
 
-    fig.tight_layout()
+    fig.tight_layout(pad=1.2)
     fig.savefig(output_dir / "system_architecture_diagram.png", dpi=plot_config.dpi)
     plt.close(fig)

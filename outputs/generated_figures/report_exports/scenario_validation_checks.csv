@@ -1,0 +1,41 @@
+scenario,check,actual,comparator,target,passed
+normal_driving,max risk should stay below target,33.372,<=,40.0,True
+normal_driving,peak brake should stay below target,0.1821,<=,0.25,True
+normal_driving,peak throttle should reach target,0.6655,>=,0.5,True
+normal_driving,RMS lane deviation should stay below target,0.0331,<=,0.1,True
+normal_driving,minimum distance should stay above target,45.0,>=,35.0,True
+normal_driving,collision expectation,False,==,False,True
+normal_driving,lane departure expectation,False,==,False,True
+high_speed_short_distance,max risk should be high enough,75.9071,>=,65.0,True
+high_speed_short_distance,peak brake should reach target,0.8372,>=,0.7,True
+high_speed_short_distance,peak throttle should stay below target,0.25,<=,0.3,True
+high_speed_short_distance,minimum distance should stay above target,15.9779,>=,10.0,True
+high_speed_short_distance,collision expectation,False,==,False,True
+high_speed_short_distance,lane departure expectation,False,==,False,True
+large_lane_deviation,peak steering magnitude should reach target,0.7983,>=,0.7,True
+large_lane_deviation,RMS lane deviation should stay below target,0.2155,<=,0.3,True
+large_lane_deviation,minimum distance should stay above target,59.7764,>=,50.0,True
+large_lane_deviation,collision expectation,False,==,False,True
+large_lane_deviation,lane departure expectation,False,==,False,True
+poor_road_condition,max risk should be high enough,59.1859,>=,50.0,True
+poor_road_condition,peak throttle should stay below target,0.25,<=,0.3,True
+poor_road_condition,minimum distance should stay above target,37.0333,>=,30.0,True
+poor_road_condition,collision expectation,False,==,False,True
+poor_road_condition,lane departure expectation,False,==,False,True
+conflicting_tradeoff,max risk should be high enough,74.4602,>=,65.0,True
+conflicting_tradeoff,peak brake should reach target,0.7495,>=,0.6,True
+conflicting_tradeoff,peak steering magnitude should reach target,0.5301,>=,0.45,True
+conflicting_tradeoff,minimum distance should stay above target,20.1671,>=,15.0,True
+conflicting_tradeoff,collision expectation,False,==,False,True
+conflicting_tradeoff,lane departure expectation,False,==,False,True
+boundary_stop_and_go,max risk should be high enough,59.5858,>=,50.0,True
+boundary_stop_and_go,peak throttle should stay below target,0.2115,<=,0.25,True
+boundary_stop_and_go,peak steering magnitude should stay below target,0.0,<=,0.1,True
+boundary_stop_and_go,minimum distance should stay above target,9.7724,>=,8.0,True
+boundary_stop_and_go,collision expectation,False,==,False,True
+boundary_stop_and_go,lane departure expectation,False,==,False,True
+boundary_open_road,peak brake should stay below target,0.1811,<=,0.25,True
+boundary_open_road,peak throttle should reach target,0.6183,>=,0.5,True
+boundary_open_road,minimum distance should stay above target,39.1468,>=,30.0,True
+boundary_open_road,collision expectation,False,==,False,True
+boundary_open_road,lane departure expectation,False,==,False,True

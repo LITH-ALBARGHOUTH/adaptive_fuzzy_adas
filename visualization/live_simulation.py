@@ -10,6 +10,7 @@ from matplotlib.patches import Rectangle
 
 from config import PlotConfig
 from utils import SimulationResult
+from visualization.plot_style import apply_plot_style, style_axis
 
 
 def show_live_simulation(
@@ -26,6 +27,7 @@ def show_live_simulation(
     if not result.records:
         return
 
+    apply_plot_style(plot_config)
     times = [record.time_s for record in result.records]
     speeds = [record.ego_state_next.speed for record in result.records]
     distances = [record.front_state_next.x_position - record.ego_state_next.x_position for record in result.records]
@@ -54,6 +56,7 @@ def show_live_simulation(
     ax_scene.set_xlabel("relative longitudinal position (m)")
     ax_scene.set_ylabel("lateral position (m)")
     ax_scene.grid(alpha=0.2)
+    style_axis(ax_scene, plot_config)
 
     ax_scene.axhline(0.0, color="gray", linestyle="--", linewidth=1.2, alpha=0.8)
     ax_scene.axhline(lane_half_width, color="black", linewidth=1.5)
@@ -96,7 +99,7 @@ def show_live_simulation(
         transform=ax_scene.transAxes,
         va="top",
         ha="right",
-        fontsize=8.5,
+        fontsize=plot_config.legend_font_size,
         bbox={"boxstyle": "round", "facecolor": "#f8fbff", "alpha": 0.92},
     )
 
@@ -110,6 +113,7 @@ def show_live_simulation(
     ax_speed.set_ylabel("value")
     ax_speed.grid(alpha=0.25)
     ax_speed.legend(loc="upper right")
+    style_axis(ax_speed, plot_config)
 
     risk_line, = ax_risk.plot([], [], color="tab:red", linewidth=2, label="risk")
     lane_line, = ax_risk.plot([], [], color="tab:green", linewidth=2, label="lane deviation")
@@ -122,6 +126,7 @@ def show_live_simulation(
     ax_risk.set_ylabel("value")
     ax_risk.grid(alpha=0.25)
     ax_risk.legend(loc="upper right")
+    style_axis(ax_risk, plot_config)
 
     throttle_line, = ax_controls.plot([], [], color="tab:purple", linewidth=2, label="throttle")
     brake_line, = ax_controls.plot([], [], color="tab:brown", linewidth=2, label="brake")
@@ -133,6 +138,7 @@ def show_live_simulation(
     ax_controls.set_ylabel("command")
     ax_controls.grid(alpha=0.25)
     ax_controls.legend(loc="upper right")
+    style_axis(ax_controls, plot_config)
 
     def _format_top_rules(frame_record) -> str:
         engine_map = [

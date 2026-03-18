@@ -9,6 +9,7 @@ import numpy as np
 
 from config import PlotConfig
 from simulation import HierarchicalFuzzyADASController
+from visualization.plot_style import apply_plot_style, style_axis
 
 
 def plot_collision_risk_surface(
@@ -19,6 +20,7 @@ def plot_collision_risk_surface(
 ) -> None:
     """Generate a 3D surface for collision risk over speed and distance."""
 
+    apply_plot_style(plot_config)
     speeds = np.linspace(0.0, 140.0, plot_config.surface_grid_points)
     distances = np.linspace(0.0, 100.0, plot_config.surface_grid_points)
     speed_grid, distance_grid = np.meshgrid(speeds, distances)
@@ -40,7 +42,8 @@ def plot_collision_risk_surface(
     ax.set_ylabel("front distance (m)")
     ax.set_zlabel("risk level")
     fig.colorbar(surface, shrink=0.7, aspect=12, label="risk level")
-    fig.tight_layout()
+    ax.tick_params(axis="both", labelsize=plot_config.tick_font_size)
+    fig.tight_layout(pad=1.2)
     fig.savefig(output_dir / "surface_collision_risk.png", dpi=plot_config.dpi)
     plt.close(fig)
 
@@ -53,6 +56,7 @@ def plot_meta_brake_contour(
 ) -> None:
     """Generate a contour plot for brake command over risk and lane index."""
 
+    apply_plot_style(plot_config)
     risks = np.linspace(0.0, 100.0, plot_config.surface_grid_points)
     lane_indices = np.linspace(0.0, 100.0, plot_config.surface_grid_points)
     risk_grid, lane_grid = np.meshgrid(risks, lane_indices)
@@ -72,6 +76,7 @@ def plot_meta_brake_contour(
     ax.set_xlabel("risk level")
     ax.set_ylabel("lane stability index")
     fig.colorbar(contour, ax=ax, label="brake command")
-    fig.tight_layout()
+    style_axis(ax, plot_config)
+    fig.tight_layout(pad=1.2)
     fig.savefig(output_dir / "contour_meta_brake.png", dpi=plot_config.dpi)
     plt.close(fig)

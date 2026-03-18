@@ -1,5 +1,3 @@
-"""3D demo için daha sade ve okunabilir oyun içi HUD."""
-
 from __future__ import annotations
 
 from typing import Callable, Dict
@@ -42,7 +40,6 @@ def _section_label(text: str, position: tuple[float, float]) -> Text:
 
 
 class SimulationHUD:
-    """Sınıf gösterimleri için sade ve anlaşılır bir arayüz."""
 
     def __init__(self, config: DemoConfig, callbacks: Dict[str, Callable[[], None]]) -> None:
         self.config = config
@@ -53,19 +50,19 @@ class SimulationHUD:
             parent=camera.ui,
             model="quad",
             color=color.rgba(18, 22, 28, 210),
-            scale=(0.34, 0.90),
+            scale=(0.38, 0.90),
             position=(panel_x, panel_y),
         )
         self.title = Text(
             parent=camera.ui,
-            text="Hiyerarşik Bulanık\n3D ADAS Demosu",
+            text="Hiyerarşik Bulanık 3D ADAS\nDemosu",
             origin=(-0.5, 0.0),
-            position=(panel_x - 0.15, 0.455),
-            scale=0.78,
+            position=(panel_x - 0.15, 0.43),
+            scale=0.66,
             color=color.azure,
         )
 
-        self.controls_label = _section_label("KONTROLLER", (panel_x - 0.15, 0.38))
+        self.controls_label = _section_label("KONTROLLER", (panel_x - 0.15, 0.37))
         self.start_button = _make_button("Başlat", (panel_x - 0.075, 0.33), callbacks["start"], scale=(0.145, 0.048))
         self.pause_button = _make_button("Duraklat", (panel_x + 0.075, 0.33), callbacks["pause"], scale=(0.145, 0.048))
         self.reset_button = _make_button("Sıfırla", (panel_x - 0.075, 0.26), callbacks["reset"], scale=(0.145, 0.048))

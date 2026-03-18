@@ -8,9 +8,11 @@ import matplotlib.pyplot as plt
 
 from config import PlotConfig
 from utils import SimulationStepRecord
+from visualization.plot_style import apply_plot_style, style_axis
 
 
-def _plot_output_defuzzification(explanation, title: str, output_path: Path, dpi: int) -> None:
+def _plot_output_defuzzification(explanation, title: str, output_path: Path, plot_config: PlotConfig) -> None:
+    apply_plot_style(plot_config)
     fig, ax = plt.subplots(figsize=(10, 5))
 
     for label, membership in explanation.terms.items():
@@ -51,9 +53,10 @@ def _plot_output_defuzzification(explanation, title: str, output_path: Path, dpi
     ax.set_ylabel("membership")
     ax.set_ylim(-0.02, 1.05)
     ax.grid(alpha=0.25)
-    ax.legend(fontsize=8, loc="upper right")
-    fig.tight_layout()
-    fig.savefig(output_path, dpi=dpi)
+    ax.legend(fontsize=plot_config.legend_font_size, loc="upper right")
+    style_axis(ax, plot_config)
+    fig.tight_layout(pad=1.2)
+    fig.savefig(output_path, dpi=plot_config.dpi)
     plt.close(fig)
 
 
@@ -68,11 +71,11 @@ def plot_example_defuzzifications(
         explanation=record.engine_results["risk"].output("risk_level"),
         title="Collision Risk Defuzzification",
         output_path=output_dir / "defuzzification_risk_level.png",
-        dpi=plot_config.dpi,
+        plot_config=plot_config,
     )
     _plot_output_defuzzification(
         explanation=record.engine_results["meta"].output("brake_command"),
         title="Meta Brake Defuzzification",
         output_path=output_dir / "defuzzification_brake_command.png",
-        dpi=plot_config.dpi,
+        plot_config=plot_config,
     )

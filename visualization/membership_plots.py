@@ -12,6 +12,7 @@ import numpy as np
 from config import MembershipSpec, PlotConfig
 from fuzzy_systems.risk_engine import CollisionRiskEngine
 from simulation import HierarchicalFuzzyADASController
+from visualization.plot_style import apply_plot_style, style_axis
 
 
 def plot_all_memberships(
@@ -21,6 +22,7 @@ def plot_all_memberships(
 ) -> None:
     """Generate membership figures for every engine."""
 
+    apply_plot_style(plot_config)
     engine_map = {
         "collision": controller.risk_engine,
         "lane": controller.lane_engine,
@@ -43,13 +45,17 @@ def plot_all_memberships(
             ax.set_ylabel("membership")
             ax.set_ylim(-0.02, 1.05)
             ax.grid(alpha=0.25)
-            ax.legend(fontsize=8, loc="upper right")
+            ax.legend(fontsize=plot_config.legend_font_size, loc="upper right")
+            style_axis(ax, plot_config)
 
         for ax in axes_array.flat[len(variables) :]:
             ax.axis("off")
 
-        fig.suptitle(f"{engine_name.title()} Engine Membership Functions", fontsize=14)
-        fig.tight_layout()
+        fig.suptitle(
+            f"{engine_name.title()} Engine Membership Functions",
+            fontsize=plot_config.title_font_size,
+        )
+        fig.tight_layout(pad=1.4)
         fig.savefig(output_dir / f"membership_{engine_name}.png", dpi=plot_config.dpi)
         plt.close(fig)
 
@@ -61,6 +67,7 @@ def plot_membership_sensitivity(
 ) -> None:
     """Vary one membership parameter and plot the effect on collision risk."""
 
+    apply_plot_style(plot_config)
     reference_input = {"speed": 90.0, "front_distance": 26.0, "road_condition": 0.50}
     shoulder_values = np.linspace(24.0, 40.0, 20)
     risk_values = []
@@ -84,6 +91,7 @@ def plot_membership_sensitivity(
     ax.set_xlabel("close-distance trapezoid upper shoulder (m)")
     ax.set_ylabel("risk_level output")
     ax.grid(alpha=0.3)
-    fig.tight_layout()
+    style_axis(ax, plot_config)
+    fig.tight_layout(pad=1.2)
     fig.savefig(output_dir / "sensitivity_collision_distance.png", dpi=plot_config.dpi)
     plt.close(fig)

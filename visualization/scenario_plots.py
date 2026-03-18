@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 
 from config import PlotConfig
 from utils import SimulationResult
+from visualization.plot_style import apply_plot_style, style_axis
 
 
 def plot_scenario_timeseries(
@@ -18,6 +19,7 @@ def plot_scenario_timeseries(
 ) -> Path:
     """Generate the required per-scenario time-series plots."""
 
+    apply_plot_style(plot_config)
     time = [record.time_s for record in result.records]
     speed = [record.sensor_inputs["speed"] for record in result.records]
     distance = [record.sensor_inputs["distance"] for record in result.records]
@@ -34,24 +36,28 @@ def plot_scenario_timeseries(
     axes[0].set_ylabel("speed (m/s)")
     axes[0].legend()
     axes[0].grid(alpha=0.25)
+    style_axis(axes[0], plot_config)
 
     axes[1].plot(time, distance, color="tab:orange", label="front distance")
     axes[1].set_title("Distance vs Time")
     axes[1].set_ylabel("distance (m)")
     axes[1].legend()
     axes[1].grid(alpha=0.25)
+    style_axis(axes[1], plot_config)
 
     axes[2].plot(time, risk, color="tab:red", label="risk")
     axes[2].set_title("Risk vs Time")
     axes[2].set_ylabel("risk")
     axes[2].legend()
     axes[2].grid(alpha=0.25)
+    style_axis(axes[2], plot_config)
 
     axes[3].plot(time, lane_deviation, color="tab:green", label="lane deviation")
     axes[3].set_title("Lane Deviation vs Time")
     axes[3].set_ylabel("lane deviation (m)")
     axes[3].legend()
     axes[3].grid(alpha=0.25)
+    style_axis(axes[3], plot_config)
 
     axes[4].plot(time, throttle, label="throttle", color="tab:purple")
     axes[4].plot(time, brake, label="brake", color="tab:brown")
@@ -61,8 +67,9 @@ def plot_scenario_timeseries(
     axes[4].set_ylabel("command")
     axes[4].legend()
     axes[4].grid(alpha=0.25)
+    style_axis(axes[4], plot_config)
 
-    figure.tight_layout()
+    figure.tight_layout(pad=1.4)
     output_path = output_dir / f"{result.scenario.name}_timeseries.png"
     figure.savefig(output_path, dpi=plot_config.dpi)
     plt.close(figure)
@@ -76,6 +83,7 @@ def plot_scenario_comparison(
 ) -> Path:
     """Generate an optional comparison plot across multiple scenarios."""
 
+    apply_plot_style(plot_config)
     figure, axes = plt.subplots(2, 2, figsize=(14, 10), sharex=False)
     axes = axes.flatten()
 
@@ -102,10 +110,11 @@ def plot_scenario_comparison(
 
     for axis in axes:
         axis.set_xlabel("time (s)")
-        axis.legend(fontsize=8)
+        axis.legend(fontsize=plot_config.legend_font_size)
         axis.grid(alpha=0.25)
+        style_axis(axis, plot_config)
 
-    figure.tight_layout()
+    figure.tight_layout(pad=1.3)
     output_path = output_dir / "scenario_comparison.png"
     figure.savefig(output_path, dpi=plot_config.dpi)
     plt.close(figure)
