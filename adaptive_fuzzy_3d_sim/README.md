@@ -34,6 +34,7 @@ Why Ursina:
   - `MANUAL`
   - `ASSISTED`
 - live fuzzy telemetry on screen
+- live top-rule activation panel on screen
 - risk banner and color-coded risk bar
 - brake-light feedback
 - optional debug sensor guide
@@ -58,6 +59,8 @@ Each frame the simulation:
 6. updates the 3D scene and HUD
 
 The fuzzy engines are kept modular and separate inside `fuzzy_systems/`.
+The HUD also shows the strongest currently firing fuzzy rules so the audience can
+see why the controller is reacting.
 
 ## Project Structure
 
@@ -121,6 +124,7 @@ python3 main.py
 - `L`: toggle lane center line
 - `N`: next scenario
 - `B`: previous scenario
+- `Esc` / `Q`: quit
 
 ## Modes
 

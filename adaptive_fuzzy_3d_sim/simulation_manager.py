@@ -92,6 +92,12 @@ class FuzzyControllerBridge:
             "subsystems": subsystem_outputs,
             "raw_controls": asdict(raw_controls),
             "controls": asdict(final_controls),
+            "engine_results": {
+                "risk": risk_result,
+                "lane": lane_result,
+                "comfort": comfort_result,
+                "meta": meta_result,
+            },
         }
 
     @staticmethod
@@ -128,6 +134,75 @@ class SimulationManager:
     CAMERA_LABELS = {
         "CHASE": "Takip",
         "TOP-DOWN": "Üstten",
+    }
+    RULE_TOKEN_LABELS = {
+        "close": "yakın",
+        "medium": "orta",
+        "low": "düşük",
+        "high": "yüksek",
+        "far": "uzak",
+        "highspeed": "yüksek hız",
+        "medspeed": "orta hız",
+        "lowspeed": "düşük hız",
+        "highrisk": "yüksek risk",
+        "mediumrisk": "orta risk",
+        "lowrisk": "düşük risk",
+        "critical": "kritik",
+        "poorroad": "kötü yol",
+        "normalroad": "normal yol",
+        "goodroad": "iyi yol",
+        "farleft": "çok sola kayma",
+        "farright": "çok sağa kayma",
+        "left": "sol",
+        "right": "sağ",
+        "centered": "merkez",
+        "unstable": "dengesiz direksiyon",
+        "stable": "kararlı direksiyon",
+        "light": "hafif",
+        "moderate": "orta",
+        "heavy": "yoğun",
+        "downhill": "iniş",
+        "uphill": "çıkış",
+        "flat": "düz yol",
+        "highcomfort": "yüksek konfor",
+        "mediumcomfort": "orta konfor",
+        "lowcomfort": "düşük konfor",
+        "strongleft": "sert sol düzeltme",
+        "strongright": "sert sağ düzeltme",
+        "baseline": "temel",
+    }
+    ANTECEDENT_VAR_LABELS = {
+        "front_distance": "ön mesafe",
+        "speed": "hız",
+        "road_condition": "yol",
+        "lane_deviation": "şerit ofseti",
+        "steering_stability": "direksiyon",
+        "road_slope": "eğim",
+        "traffic_density": "trafik",
+        "current_speed": "hız",
+        "risk_level": "risk",
+        "lane_stability": "şerit",
+        "comfort_efficiency": "konfor",
+    }
+    CONSEQUENT_LABELS = {
+        "low": "düşük",
+        "medium": "orta",
+        "high": "yüksek",
+        "critical": "kritik",
+        "strong_left": "sert sol",
+        "left": "sol",
+        "centered": "merkez",
+        "right": "sağ",
+        "strong_right": "sert sağ",
+        "zero": "sıfır",
+        "light": "hafif",
+        "none": "yok",
+        "hard": "sert",
+        "keep": "koru",
+        "steer_left": "sola kır",
+        "steer_left_hard": "sert sola kır",
+        "steer_right": "sağa kır",
+        "steer_right_hard": "sert sağa kır",
     }
 
     def __init__(self, config: DemoConfig | None = None) -> None:
@@ -178,6 +253,7 @@ class SimulationManager:
         self.last_manual_command = ControlCommand(0.0, 0.0, 0.0)
         self.last_fuzzy_subsystems = {"risk": 0.0, "lane": 50.0, "comfort": 50.0}
         self.last_fuzzy_controls = {"throttle": 0.0, "brake": 0.0, "steering": 0.0}
+        self.last_engine_results = {}
         self.last_applied_command = ControlCommand(0.0, 0.0, 0.0)
         self.reset_current_scenario()
 
@@ -266,6 +342,7 @@ class SimulationManager:
         self.last_manual_command = ControlCommand(0.0, 0.0, 0.0)
         self.last_fuzzy_subsystems = {"risk": 0.0, "lane": 50.0, "comfort": 50.0}
         self.last_fuzzy_controls = {"throttle": 0.0, "brake": 0.0, "steering": 0.0}
+        self.last_engine_results = {}
         self.last_applied_command = ControlCommand(0.0, 0.0, 0.0)
 
         self._sync_visuals()
@@ -307,6 +384,7 @@ class SimulationManager:
             fuzzy_result = self.controller.evaluate(**sensor_inputs)
             self.last_fuzzy_subsystems = fuzzy_result["subsystems"]
             self.last_fuzzy_controls = fuzzy_result["controls"]
+            self.last_engine_results = fuzzy_result["engine_results"]
 
             fuzzy_command = ControlCommand(**self.last_fuzzy_controls)
             applied_command = self._resolve_command(
@@ -476,19 +554,80 @@ class SimulationManager:
 
     def _telemetry_lines(self) -> list[str]:
         return [
-            f"Hız: {self.ego_state.speed_mps:5.2f} m/s ({self.ego_state.speed_mps * 3.6:5.1f} km/sa)",
-            f"Ön Mesafe: {self._front_distance():5.2f} m",
-            f"Şerit Ofseti: {self.ego_state.lateral_x:5.2f} m",
-            f"Yol Koşulu: {self.environment_state.road_condition:4.2f}",
-            f"Eğim: {self.environment_state.slope:5.2f}",
-            f"Trafik Yoğunluğu: {self.environment_state.traffic_density:4.2f}",
-            f"Risk Seviyesi: {self.last_fuzzy_subsystems['risk']:5.2f}",
-            f"Şerit Kararlılığı: {self.last_fuzzy_subsystems['lane']:5.2f}",
-            f"Konfor/Verim: {self.last_fuzzy_subsystems['comfort']:5.2f}",
-            f"Gaz: {self.last_applied_command.throttle:4.2f}",
-            f"Fren: {self.last_applied_command.brake:4.2f}",
-            f"Direksiyon: {self.last_applied_command.steering:5.2f}",
+            f"Hız {self.ego_state.speed_mps:4.1f} m/s | Ön {self._front_distance():4.1f} m",
+            f"Ofset {self.ego_state.lateral_x:4.2f} m | Risk {self.last_fuzzy_subsystems['risk']:5.1f}",
+            f"Şerit {self.last_fuzzy_subsystems['lane']:5.1f} | Konfor {self.last_fuzzy_subsystems['comfort']:5.1f}",
+            f"Gaz {self.last_applied_command.throttle:4.2f} | Fren {self.last_applied_command.brake:4.2f} | Dir {self.last_applied_command.steering:4.2f}",
+            f"Yol {self.environment_state.road_condition:4.2f} | Eğim {self.environment_state.slope:4.1f} | Trafik {self.environment_state.traffic_density:4.2f}",
         ]
+
+    def _pretty_antecedent(self, antecedent_key: str) -> str:
+        """Convert one antecedent key into a readable Turkish phrase."""
+
+        variable_name, label_name = antecedent_key.split(".", 1)
+        variable_label = self.ANTECEDENT_VAR_LABELS.get(variable_name, variable_name.replace("_", " "))
+        state_label = self.RULE_TOKEN_LABELS.get(label_name, label_name.replace("_", " "))
+        return f"{variable_label} {state_label}"
+
+    def _summarize_activation_reason(self, activation) -> str:
+        """Build a compact reason sentence from rule antecedents."""
+
+        reasons = [
+            self._pretty_antecedent(key)
+            for key in activation.antecedent_memberships.keys()
+        ]
+        if not reasons:
+            return "genel durum"
+
+        text = ", ".join(reasons[:2])
+        if len(reasons) > 2:
+            text = f"{text}, ..."
+        if len(text) > 32:
+            return f"{text[:29]}..."
+        return text
+
+    def _pretty_consequent(self, label: str) -> str:
+        """Return a user-facing Turkish consequent label."""
+
+        return self.CONSEQUENT_LABELS.get(label, label.replace("_", " "))
+
+    def _rule_lines(self) -> list[str]:
+        """Return readable live rule summaries for the HUD."""
+
+        if not self.last_engine_results:
+            return [
+                "Simülasyon başlayınca burada",
+                "baskın neden ve kararlar",
+                "özet olarak görünecek.",
+            ]
+
+        engine_outputs = [
+            ("RİSK", self.last_engine_results["risk"].output("risk_level").activations),
+            ("ŞERİT", self.last_engine_results["lane"].output("lane_stability").activations),
+            ("KONFOR", self.last_engine_results["comfort"].output("comfort_efficiency").activations),
+            ("FREN", self.last_engine_results["meta"].output("brake_command").activations),
+        ]
+
+        lines = []
+        for title, activations in engine_outputs:
+            ranked = [
+                activation
+                for activation in sorted(activations, key=lambda item: item.firing_strength, reverse=True)
+                if activation.firing_strength > 0.0
+            ][:1]
+            lines.append(f"{title}:")
+            if not ranked:
+                lines.append("  aktif kural yok")
+                continue
+            activation = ranked[0]
+            lines.append(
+                f"  Neden: {self._summarize_activation_reason(activation)}"
+            )
+            lines.append(
+                f"  Karar: {self._pretty_consequent(activation.consequent_label)} "
+                f"({activation.firing_strength:.2f})"
+            )
+        return lines
 
     def _scenario_display_name(self) -> str:
         """Arayüz için Türkçe senaryo etiketi dön."""
@@ -512,4 +651,5 @@ class SimulationManager:
             status_color=status_color,
             warning_message=self.last_warning_message or self.current_scenario.interpretation_hint,
             risk_value=self.last_fuzzy_subsystems["risk"],
+            rule_lines=self._rule_lines(),
         )

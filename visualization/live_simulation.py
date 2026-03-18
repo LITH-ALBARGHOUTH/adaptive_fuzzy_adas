@@ -89,6 +89,16 @@ def show_live_simulation(
         fontsize=10,
         bbox={"boxstyle": "round", "facecolor": "white", "alpha": 0.9},
     )
+    rule_text = ax_scene.text(
+        0.98,
+        0.98,
+        "",
+        transform=ax_scene.transAxes,
+        va="top",
+        ha="right",
+        fontsize=8.5,
+        bbox={"boxstyle": "round", "facecolor": "#f8fbff", "alpha": 0.92},
+    )
 
     speed_line, = ax_speed.plot([], [], color="tab:blue", linewidth=2, label="ego speed")
     distance_line, = ax_speed.plot([], [], color="tab:orange", linewidth=2, label="distance")
@@ -124,6 +134,26 @@ def show_live_simulation(
     ax_controls.grid(alpha=0.25)
     ax_controls.legend(loc="upper right")
 
+    def _format_top_rules(frame_record) -> str:
+        engine_map = [
+            ("Risk", frame_record.engine_results["risk"].output("risk_level").activations),
+            ("Lane", frame_record.engine_results["lane"].output("lane_stability").activations),
+            ("Comfort", frame_record.engine_results["comfort"].output("comfort_efficiency").activations),
+            ("Brake", frame_record.engine_results["meta"].output("brake_command").activations),
+        ]
+        lines = ["Top Rule Activations"]
+        for label, activations in engine_map:
+            ranked = [item for item in sorted(activations, key=lambda item: item.firing_strength, reverse=True) if item.firing_strength > 0.0][:2]
+            lines.append(f"{label}:")
+            if not ranked:
+                lines.append("  - no active rule")
+                continue
+            for activation in ranked:
+                lines.append(
+                    f"  - {activation.rule_name} -> {activation.consequent_label} ({activation.firing_strength:.2f})"
+                )
+        return "\n".join(lines)
+
     def _update(frame_index: int):
         record = result.records[frame_index]
         ego = record.ego_state_next
@@ -158,6 +188,7 @@ def show_live_simulation(
                 ]
             )
         )
+        rule_text.set_text(_format_top_rules(record))
 
         return (
             ego_patch,
@@ -170,6 +201,7 @@ def show_live_simulation(
             brake_line,
             steering_line,
             info_text,
+            rule_text,
         )
 
     interval_ms = max(25, int(result.records[1].time_s * 400.0)) if len(result.records) > 1 else 120

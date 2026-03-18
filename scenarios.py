@@ -10,6 +10,7 @@ from utils import (
     EgoVehicleState,
     EnvironmentState,
     FrontVehicleState,
+    ScenarioExpectation,
     ScenarioDefinition,
 )
 
@@ -75,6 +76,16 @@ def normal_driving() -> ScenarioDefinition:
         front_acceleration_profile=_windowed_acceleration(0.0, [(8.0, 10.0, -0.8)]),
         environment_profile=_windowed_environment(0.90, 0.5, 0.30, [(12.0, 16.0, {"traffic_density": 0.45})]),
         lane_disturbance_profile=_sinusoidal_lane_rate(0.03, 0.8),
+        expectation=ScenarioExpectation(
+            description="Low-risk, comfort-oriented cruising with only light braking.",
+            max_max_risk=40.0,
+            max_peak_brake=0.25,
+            min_peak_throttle=0.50,
+            max_rms_lane_deviation=0.10,
+            min_minimum_distance=35.0,
+            expect_collision=False,
+            expect_lane_departure=False,
+        ),
     )
 
 
@@ -91,6 +102,15 @@ def high_speed_short_distance() -> ScenarioDefinition:
         front_acceleration_profile=_windowed_acceleration(0.0, [(4.0, 7.5, -4.0)]),
         environment_profile=_windowed_environment(0.82, 0.0, 0.45, []),
         lane_disturbance_profile=_sinusoidal_lane_rate(0.01, 0.5),
+        expectation=ScenarioExpectation(
+            description="Safety-dominant braking should emerge while avoiding collision.",
+            min_max_risk=65.0,
+            min_peak_brake=0.70,
+            max_peak_throttle=0.30,
+            min_minimum_distance=10.0,
+            expect_collision=False,
+            expect_lane_departure=False,
+        ),
     )
 
 
@@ -107,6 +127,14 @@ def large_lane_deviation() -> ScenarioDefinition:
         front_acceleration_profile=_windowed_acceleration(0.0, []),
         environment_profile=_windowed_environment(0.93, 0.0, 0.25, []),
         lane_disturbance_profile=_constant_lane_rate(0.02),
+        expectation=ScenarioExpectation(
+            description="Strong lateral correction should dominate without leaving the lane.",
+            min_peak_abs_steering=0.70,
+            max_rms_lane_deviation=0.30,
+            min_minimum_distance=50.0,
+            expect_collision=False,
+            expect_lane_departure=False,
+        ),
     )
 
 
@@ -128,6 +156,14 @@ def poor_road_condition() -> ScenarioDefinition:
             [(7.0, 14.0, {"road_condition": 0.22, "traffic_density": 0.65})],
         ),
         lane_disturbance_profile=_sinusoidal_lane_rate(0.015, 1.1),
+        expectation=ScenarioExpectation(
+            description="Road degradation should raise risk and moderate throttle usage.",
+            min_max_risk=50.0,
+            max_peak_throttle=0.30,
+            min_minimum_distance=30.0,
+            expect_collision=False,
+            expect_lane_departure=False,
+        ),
     )
 
 
@@ -149,6 +185,15 @@ def conflicting_tradeoff() -> ScenarioDefinition:
             [(10.0, 15.0, {"traffic_density": 0.08, "slope": -3.5})],
         ),
         lane_disturbance_profile=_sinusoidal_lane_rate(0.025, 0.6, bias=0.02),
+        expectation=ScenarioExpectation(
+            description="Competing objectives should produce both notable braking and steering activity.",
+            min_max_risk=65.0,
+            min_peak_brake=0.60,
+            min_peak_abs_steering=0.45,
+            min_minimum_distance=15.0,
+            expect_collision=False,
+            expect_lane_departure=False,
+        ),
     )
 
 
@@ -165,6 +210,15 @@ def boundary_stop_and_go() -> ScenarioDefinition:
         front_acceleration_profile=_windowed_acceleration(0.0, [(4.0, 6.0, -1.2), (11.0, 14.0, 0.8)]),
         environment_profile=_windowed_environment(0.45, 0.0, 0.95, []),
         lane_disturbance_profile=_constant_lane_rate(0.0),
+        expectation=ScenarioExpectation(
+            description="The controller should remain stable at low speed and come close to a stop if needed.",
+            min_max_risk=50.0,
+            max_peak_throttle=0.25,
+            max_peak_abs_steering=0.10,
+            min_minimum_distance=8.0,
+            expect_collision=False,
+            expect_lane_departure=False,
+        ),
     )
 
 
@@ -181,6 +235,14 @@ def boundary_open_road() -> ScenarioDefinition:
         front_acceleration_profile=_windowed_acceleration(0.0, []),
         environment_profile=_windowed_environment(1.00, -0.5, 0.05, []),
         lane_disturbance_profile=_sinusoidal_lane_rate(0.01, 0.5),
+        expectation=ScenarioExpectation(
+            description="Open-road comfort bias should keep throttle healthy and braking light.",
+            max_peak_brake=0.25,
+            min_peak_throttle=0.50,
+            min_minimum_distance=30.0,
+            expect_collision=False,
+            expect_lane_departure=False,
+        ),
     )
 
 

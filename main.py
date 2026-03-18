@@ -6,7 +6,8 @@ import argparse
 from pathlib import Path
 from typing import Sequence
 
-from config import get_default_plot_config, get_default_simulation_config
+from config import get_default_fuzzy_config, get_default_plot_config, get_default_simulation_config
+from reporting import generate_report_bundle
 from scenarios import get_predefined_scenarios
 from simulation import HierarchicalFuzzyADASController, run_simulation
 from utils import ensure_directory, print_scenario_report
@@ -40,6 +41,11 @@ def build_argument_parser(scenario_names: Sequence[str]) -> argparse.ArgumentPar
         "--no-live",
         action="store_true",
         help="Disable the live simulation window for single-scenario runs.",
+    )
+    parser.add_argument(
+        "--skip-report-bundle",
+        action="store_true",
+        help="Skip fuzzy-logic report artifacts such as rule tables and explainability figures.",
     )
     parser.add_argument(
         "--output-dir",
@@ -97,11 +103,12 @@ def run_interactive_mode(controller: HierarchicalFuzzyADASController) -> None:
 def main() -> None:
     """Run the requested simulation mode."""
 
+    fuzzy_config = get_default_fuzzy_config()
     scenarios = get_predefined_scenarios()
     parser = build_argument_parser(sorted(scenarios))
     args = parser.parse_args()
 
-    controller = HierarchicalFuzzyADASController()
+    controller = HierarchicalFuzzyADASController(fuzzy_config)
 
     if args.interactive:
         run_interactive_mode(controller)
@@ -128,6 +135,16 @@ def main() -> None:
     if not args.skip_plots and len(results) > 1:
         plot_scenario_comparison(results, output_dir, plot_config)
 
+    bundle_outputs = None
+    if not args.skip_plots and not args.skip_report_bundle:
+        bundle_outputs = generate_report_bundle(
+            controller=controller,
+            fuzzy_config=fuzzy_config,
+            results=results,
+            output_dir=output_dir,
+            plot_config=plot_config,
+        )
+
     if not args.no_live and len(results) == 1:
         only_result = next(iter(results.values()))
         show_live_simulation(only_result, plot_config)
@@ -138,6 +155,8 @@ def main() -> None:
     else:
         print("-" * 88)
         print(f"Saved plots to: {output_dir.resolve()}")
+        if bundle_outputs is not None:
+            print(f"Saved report exports to: {(output_dir / 'report_exports').resolve()}")
 
 
 if __name__ == "__main__":

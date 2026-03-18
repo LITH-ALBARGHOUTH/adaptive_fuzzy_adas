@@ -61,6 +61,25 @@ class EnvironmentState:
 
 
 @dataclass
+class ScenarioExpectation:
+    """Validation targets used for scenario-level test comparisons."""
+
+    description: str
+    min_max_risk: float | None = None
+    max_max_risk: float | None = None
+    min_peak_brake: float | None = None
+    max_peak_brake: float | None = None
+    min_peak_throttle: float | None = None
+    max_peak_throttle: float | None = None
+    min_peak_abs_steering: float | None = None
+    max_peak_abs_steering: float | None = None
+    max_rms_lane_deviation: float | None = None
+    min_minimum_distance: float | None = None
+    expect_collision: bool | None = None
+    expect_lane_departure: bool | None = None
+
+
+@dataclass
 class ScenarioDefinition:
     """Scenario definition with dynamic callback profiles."""
 
@@ -74,6 +93,7 @@ class ScenarioDefinition:
     front_acceleration_profile: Callable[[float, FrontVehicleState], float]
     environment_profile: Callable[[float], EnvironmentState]
     lane_disturbance_profile: Callable[[float], float]
+    expectation: ScenarioExpectation | None = None
 
 
 @dataclass
@@ -195,6 +215,29 @@ def build_interpretation(result: SimulationResult) -> str:
     if first.subsystem_outputs["comfort"] >= 65.0 and summary["max_risk"] < 60.0:
         return "The controller remained in a comfort-oriented regime and preserved speed smoothly."
     return "The controller balanced safety, lane stability, and comfort without hitting a hard limit."
+
+
+def compute_result_metrics(result: SimulationResult) -> Dict[str, float | bool]:
+    """Compute derived metrics used for validation and reporting."""
+
+    peak_brake = max((record.final_command_outputs["brake"] for record in result.records), default=0.0)
+    peak_throttle = max((record.final_command_outputs["throttle"] for record in result.records), default=0.0)
+    peak_abs_steering = max(
+        (abs(record.final_command_outputs["steering"]) for record in result.records),
+        default=0.0,
+    )
+
+    return {
+        "final_speed": float(result.summary["final_speed"]),
+        "minimum_distance": float(result.summary["minimum_distance"]),
+        "max_risk": float(result.summary["max_risk"]),
+        "rms_lane_deviation": float(result.summary["rms_lane_deviation"]),
+        "collision": bool(result.summary["collision"]),
+        "lane_departure": bool(result.summary["lane_departure"]),
+        "peak_brake": float(peak_brake),
+        "peak_throttle": float(peak_throttle),
+        "peak_abs_steering": float(peak_abs_steering),
+    }
 
 
 def print_scenario_report(result: SimulationResult) -> None:
