@@ -154,6 +154,7 @@ Included scenarios:
 - `conflicting_tradeoff`
 - `boundary_stop_and_go`
 - `boundary_open_road`
+- `uphill_grade_challenge`
 
 ## Recommended Demo Flow
 

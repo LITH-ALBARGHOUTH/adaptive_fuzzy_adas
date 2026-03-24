@@ -57,6 +57,7 @@ The project includes seven predefined scenarios:
 - `conflicting_tradeoff`
 - `boundary_stop_and_go`
 - `boundary_open_road`
+- `uphill_grade_challenge`
 
 Each scenario defines:
 

@@ -86,7 +86,7 @@ class SimulationHUD:
         )
         self.mode_label = Text(
             parent=camera.ui,
-            text="Mod: Demo",
+            text="Mod: Otonom",
             origin=(-0.5, 0.0),
             position=(panel_x - 0.15, -0.10),
             scale=0.82,

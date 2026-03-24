@@ -22,7 +22,7 @@ def _plot_output_defuzzification(explanation, title: str, output_path: Path, plo
             linestyle="--",
             linewidth=1.0,
             alpha=0.35,
-            label=f"{label} term",
+            label=f"{label} terimi",
         )
 
     for activation in explanation.activations:
@@ -39,18 +39,18 @@ def _plot_output_defuzzification(explanation, title: str, output_path: Path, plo
         explanation.aggregated_membership,
         color="black",
         linewidth=2.5,
-        label="aggregated output",
+        label="birleşik çıktı",
     )
     ax.axvline(
         explanation.crisp_value,
         color="tab:red",
         linestyle="-",
         linewidth=2.0,
-        label=f"centroid = {explanation.crisp_value:.2f}",
+        label=f"ağırlık merkezi = {explanation.crisp_value:.2f}",
     )
     ax.set_title(title)
     ax.set_xlabel(explanation.output_name.replace("_", " "))
-    ax.set_ylabel("membership")
+    ax.set_ylabel("üyelik")
     ax.set_ylim(-0.02, 1.05)
     ax.grid(alpha=0.25)
     ax.legend(fontsize=plot_config.legend_font_size, loc="upper right")
@@ -69,13 +69,13 @@ def plot_example_defuzzifications(
 
     _plot_output_defuzzification(
         explanation=record.engine_results["risk"].output("risk_level"),
-        title="Collision Risk Defuzzification",
+        title="Çarpışma Riski Durulaştırma Grafiği",
         output_path=output_dir / "defuzzification_risk_level.png",
         plot_config=plot_config,
     )
     _plot_output_defuzzification(
         explanation=record.engine_results["meta"].output("brake_command"),
-        title="Meta Brake Defuzzification",
+        title="Meta Fren Durulaştırma Grafiği",
         output_path=output_dir / "defuzzification_brake_command.png",
         plot_config=plot_config,
     )

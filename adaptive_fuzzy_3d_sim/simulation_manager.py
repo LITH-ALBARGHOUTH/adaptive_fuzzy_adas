@@ -121,7 +121,7 @@ class FuzzyControllerBridge:
 class SimulationManager:
     """Canlı 3D simülasyonu, arayüzü ve bulanık entegrasyonu yönetir."""
 
-    MODES = ["DEMO", "MANUEL", "DESTEKLİ"]
+    MODES = ["OTONOM", "MANUEL", "DESTEKLİ"]
     SCENARIO_LABELS = {
         "normal_driving": "Normal Sürüş",
         "high_speed_short_distance": "Yüksek Hız Kısa Mesafe",
@@ -130,6 +130,7 @@ class SimulationManager:
         "conflicting_tradeoff": "Çatışmalı Karar Durumu",
         "boundary_stop_and_go": "Sınır Durumu Dur-Kalk",
         "boundary_open_road": "Sınır Durumu Açık Yol",
+        "uphill_grade_challenge": "Yokuş Tırmanışı",
     }
     CAMERA_LABELS = {
         "CHASE": "Takip",
@@ -222,9 +223,13 @@ class SimulationManager:
         self.collision = False
         self.lane_departure = False
         self.last_warning_message = ""
+        self.dangerous_overtake = False
+        self.overtake_state_label = "Yok"
+        self.overtake_phase = "idle"
 
         self.ego_visual = VehicleVisual(color.azure, with_brake_lights=True)
         self.front_visual = VehicleVisual(color.orange, with_brake_lights=True, scale_factor=0.96)
+        self.oncoming_visual = VehicleVisual(color.red, with_brake_lights=True, scale_factor=0.92)
 
         self.hud = SimulationHUD(
             self.config,
@@ -246,6 +251,7 @@ class SimulationManager:
         self.environment_state = self.current_scenario.environment_initial
         self.ego_state = self.current_scenario.ego_initial
         self.front_state = self.current_scenario.front_initial
+        self.oncoming_state = TrafficVehicleState(lateral_x=0.0, forward_z=160.0, speed_mps=24.0)
         self.steering_history: deque[float] = deque(
             [self.ego_state.steering_state],
             maxlen=self.config.steering_history_window,
@@ -330,10 +336,18 @@ class SimulationManager:
         self.collision = False
         self.lane_departure = False
         self.last_warning_message = ""
+        self.dangerous_overtake = False
+        self.overtake_state_label = "Yok"
+        self.overtake_phase = "idle"
         self.input_controller.reset()
 
         self.ego_state = EgoVehicleState(**asdict(scenario.ego_initial))
         self.front_state = TrafficVehicleState(**asdict(scenario.front_initial))
+        self.oncoming_state = TrafficVehicleState(
+            lateral_x=0.0,
+            forward_z=self.ego_state.forward_z + self.config.oncoming_spawn_distance_m,
+            speed_mps=20.0 + (scenario.environment_initial.traffic_density * 12.0),
+        )
         self.environment_state = EnvironmentState(**asdict(scenario.environment_initial))
         self.steering_history = deque(
             [self.ego_state.steering_state],
@@ -344,6 +358,7 @@ class SimulationManager:
         self.last_fuzzy_controls = {"throttle": 0.0, "brake": 0.0, "steering": 0.0}
         self.last_engine_results = {}
         self.last_applied_command = ControlCommand(0.0, 0.0, 0.0)
+        self.world.configure_for_scenario(self.current_scenario.name)
 
         self._sync_visuals()
         self._refresh_hud()
@@ -385,6 +400,8 @@ class SimulationManager:
             self.last_fuzzy_subsystems = fuzzy_result["subsystems"]
             self.last_fuzzy_controls = fuzzy_result["controls"]
             self.last_engine_results = fuzzy_result["engine_results"]
+            self._update_overtake_analysis()
+            self._update_overtake_phase()
 
             fuzzy_command = ControlCommand(**self.last_fuzzy_controls)
             applied_command = self._resolve_command(
@@ -392,10 +409,12 @@ class SimulationManager:
                 fuzzy_command=fuzzy_command,
                 sensor_inputs=sensor_inputs,
             )
+            applied_command = self._apply_overtake_behavior(applied_command)
             self.last_applied_command = applied_command
 
             self._update_ego_vehicle(applied_command, dt)
             self._update_front_vehicle(dt)
+            self._update_oncoming_vehicle(dt)
             self._update_flags(sensor_inputs["front_distance_m"])
 
             if self.current_time >= self.current_scenario.duration_s or self.collision or self.lane_departure:
@@ -403,7 +422,12 @@ class SimulationManager:
                 self.running = False
 
         self._sync_visuals()
-        self.camera_controller.update(self.ego_state, dt)
+        ego_render_x = self.world.lane_visual_x(
+            self.ego_state.lateral_x,
+            self.config.ego_lane_visual_offset_m,
+        )
+        ego_height, _ = self.world.road_height_and_pitch(self.ego_state.forward_z)
+        self.camera_controller.update(self.ego_state, dt, ego_render_x, ego_height)
         self._refresh_hud()
 
     def _build_sensor_inputs(self) -> Dict[str, float]:
@@ -421,11 +445,12 @@ class SimulationManager:
         }
 
     def _front_distance(self) -> float:
-        lateral_gap = abs(self.front_state.lateral_x - self.ego_state.lateral_x)
+        ego_lane = self._ego_lane_id()
+        front_lane = self._front_lane_id()
         forward_gap = self.front_state.forward_z - self.ego_state.forward_z
         if forward_gap <= 0.0:
             return 120.0
-        if lateral_gap > self.config.same_lane_threshold_m:
+        if ego_lane != front_lane:
             return 120.0
         return min(forward_gap, 120.0)
 
@@ -437,6 +462,172 @@ class SimulationManager:
         stability = 1.0 - min(variability / 0.55, 1.0)
         return _clamp(stability, 0.0, 1.0)
 
+    def _oncoming_distance(self) -> float:
+        """Distance to the nearest oncoming vehicle in the opposite lane."""
+
+        return self.oncoming_state.forward_z - self.ego_state.forward_z
+
+    def _ego_visual_x(self) -> float:
+        """Rendered x position of the ego vehicle."""
+
+        return self.world.lane_visual_x(
+            self.ego_state.lateral_x,
+            self.config.ego_lane_visual_offset_m,
+        )
+
+    def _front_visual_x(self) -> float:
+        """Rendered x position of the front vehicle."""
+
+        return self.world.lane_visual_x(
+            self.front_state.lateral_x,
+            self.config.ego_lane_visual_offset_m,
+        )
+
+    def _oncoming_visual_x(self) -> float:
+        """Rendered x position of the oncoming vehicle."""
+
+        return self.world.lane_visual_x(
+            self.oncoming_state.lateral_x,
+            -self.config.ego_lane_visual_offset_m,
+        )
+
+    def _ego_lane_id(self) -> int:
+        """Lane identity of the ego car in rendered space."""
+
+        return self.world.lane_id_from_visual_x(self._ego_visual_x())
+
+    def _front_lane_id(self) -> int:
+        """Lane identity of the front car in rendered space."""
+
+        return self.world.lane_id_from_visual_x(self._front_visual_x())
+
+    def _oncoming_lane_id(self) -> int:
+        """Lane identity of the oncoming car in rendered space."""
+
+        return self.world.lane_id_from_visual_x(self._oncoming_visual_x())
+
+    def _is_attempting_overtake(self) -> bool:
+        """Return True when the ego vehicle has crossed into the opposite lane."""
+
+        ego_visual_x = self.world.lane_visual_x(
+            self.ego_state.lateral_x,
+            self.config.ego_lane_visual_offset_m,
+        )
+        return ego_visual_x <= 0.2
+
+    def _should_start_overtake(self) -> bool:
+        """Return True when conditions are favorable for a pass."""
+
+        if self._ego_lane_id() != 1 or self._front_lane_id() != 1:
+            return False
+        if self._front_distance() > self.config.overtake_trigger_distance_m:
+            return False
+        if (self.ego_state.speed_mps - self.front_state.speed_mps) < self.config.overtake_min_speed_advantage_mps:
+            return False
+        if self._oncoming_distance() < self.config.overtake_safe_oncoming_distance_m:
+            return False
+        return self.last_fuzzy_subsystems["risk"] < self.config.status_high_risk_threshold
+
+    def _update_overtake_phase(self) -> None:
+        """Advance the pass-and-return state machine."""
+
+        if self.mode_name == "MANUEL":
+            if self._is_attempting_overtake():
+                self.overtake_phase = "manual"
+                self.overtake_state_label = "Manuel Sollama"
+            elif self.overtake_phase == "manual":
+                self.overtake_phase = "idle"
+                self.overtake_state_label = "Yok"
+            return
+
+        if self.dangerous_overtake and self.overtake_phase in {"merge_left", "pass_left"}:
+            self.overtake_phase = "return_right"
+            return
+
+        if self.overtake_phase == "idle":
+            if self.mode_name == "OTONOM" and self._should_start_overtake():
+                self.overtake_phase = "merge_left"
+            return
+
+        if self.overtake_phase == "merge_left":
+            if self.ego_state.lateral_x <= self.config.overtake_left_lane_target_m + 0.10:
+                self.overtake_phase = "pass_left"
+            return
+
+        if self.overtake_phase == "pass_left":
+            if (self.ego_state.forward_z - self.front_state.forward_z) >= self.config.overtake_return_gap_m:
+                self.overtake_phase = "return_right"
+            return
+
+        if self.overtake_phase == "return_right":
+            if self.ego_state.lateral_x >= -0.10:
+                self.overtake_phase = "idle"
+                self.overtake_state_label = "Tamamlandı"
+            return
+
+    def _apply_overtake_behavior(self, command: ControlCommand) -> ControlCommand:
+        """Blend overtaking steering targets with the current command."""
+
+        if self.mode_name == "MANUEL":
+            return command
+
+        if self.overtake_phase == "merge_left":
+            target_offset = self.config.overtake_left_lane_target_m
+            steering = _clamp((target_offset - self.ego_state.lateral_x) * 0.95, -0.95, 0.55)
+            self.overtake_state_label = "Sollama Başlıyor"
+            return ControlCommand(
+                throttle=max(command.throttle, 0.45),
+                brake=min(command.brake, 0.10),
+                steering=steering,
+            )
+
+        if self.overtake_phase == "pass_left":
+            steering = _clamp((self.config.overtake_left_lane_target_m - self.ego_state.lateral_x) * 0.70, -0.55, 0.35)
+            self.overtake_state_label = "Sol Şeritte Geçiş"
+            return ControlCommand(
+                throttle=max(command.throttle, 0.40),
+                brake=min(command.brake, 0.12),
+                steering=steering,
+            )
+
+        if self.overtake_phase == "return_right":
+            steering = _clamp((0.0 - self.ego_state.lateral_x) * 0.95, -0.60, 0.95)
+            self.overtake_state_label = "Sağ Şeride Dönüş"
+            return ControlCommand(
+                throttle=max(command.throttle, 0.28),
+                brake=min(command.brake, 0.18),
+                steering=steering,
+            )
+
+        if self.overtake_phase == "idle" and self.overtake_state_label != "Tamamlandı":
+            self.overtake_state_label = "Yok"
+        return command
+
+    def _update_overtake_analysis(self) -> None:
+        """Analyze whether the current overtaking maneuver is dangerous."""
+
+        if not self._is_attempting_overtake():
+            self.dangerous_overtake = False
+            self.overtake_state_label = "Yok"
+            return
+
+        oncoming_distance = self._oncoming_distance()
+        if oncoming_distance <= 0.0:
+            self.dangerous_overtake = False
+            self.overtake_state_label = "Temiz"
+            return
+        if oncoming_distance <= self.config.oncoming_critical_distance_m:
+            self.dangerous_overtake = True
+            self.overtake_state_label = "Kritik"
+            return
+        if oncoming_distance <= self.config.oncoming_clearance_distance_m:
+            self.dangerous_overtake = True
+            self.overtake_state_label = "Riskli"
+            return
+
+        self.dangerous_overtake = False
+        self.overtake_state_label = "Kontrollü"
+
     def _resolve_command(
         self,
         *,
@@ -444,12 +635,18 @@ class SimulationManager:
         fuzzy_command: ControlCommand,
         sensor_inputs: Dict[str, float],
     ) -> ControlCommand:
-        if self.mode_name == "DEMO":
+        if self.mode_name == "OTONOM":
             self.last_warning_message = "Otonom bulanık kontrol aktif."
+            if self.dangerous_overtake:
+                self.last_warning_message = "Tehlikeli sollama: karşı şeritte araç var."
+            elif self.overtake_phase in {"merge_left", "pass_left", "return_right"}:
+                self.last_warning_message = f"Otonom manevra: {self.overtake_state_label}."
             return fuzzy_command
 
         if self.mode_name == "MANUEL":
-            if self.last_fuzzy_subsystems["risk"] >= self.config.status_high_risk_threshold:
+            if self.dangerous_overtake:
+                self.last_warning_message = "Tehlikeli sollama: karşıdan araç yaklaşıyor."
+            elif self.last_fuzzy_subsystems["risk"] >= self.config.status_high_risk_threshold:
                 self.last_warning_message = "Uyarı: sürüş sırasında yüksek risk algılandı."
             elif abs(sensor_inputs["lane_deviation_m"]) > 1.0:
                 self.last_warning_message = "Uyarı: şerit sapması artıyor."
@@ -458,6 +655,14 @@ class SimulationManager:
             return manual_command
 
         risk = self.last_fuzzy_subsystems["risk"]
+        if self.dangerous_overtake:
+            self.last_warning_message = "Destek devrede: tehlikeli sollama kesiliyor."
+            return ControlCommand(
+                throttle=min(manual_command.throttle, 0.12),
+                brake=max(manual_command.brake, max(0.45, fuzzy_command.brake)),
+                steering=max(manual_command.steering, fuzzy_command.steering),
+            )
+
         if risk >= self.config.critical_risk_threshold:
             self.last_warning_message = "Destek devraldı: kritik risk."
             return ControlCommand(
@@ -514,27 +719,86 @@ class SimulationManager:
         self.front_state.forward_z += self.front_state.speed_mps * dt
         self.front_state.braking = acceleration < -0.35
 
+    def _update_oncoming_vehicle(self, dt: float) -> None:
+        """Move the opposite-lane vehicle toward the ego car and recycle it."""
+
+        traffic_bias = self.environment_state.traffic_density
+        target_speed = 18.0 + (traffic_bias * 16.0)
+        self.oncoming_state.speed_mps += (target_speed - self.oncoming_state.speed_mps) * min(1.0, dt * 1.5)
+        self.oncoming_state.forward_z -= self.oncoming_state.speed_mps * dt
+        self.oncoming_state.braking = False
+
+        if self.oncoming_state.forward_z < self.ego_state.forward_z - 45.0:
+            self.oncoming_state.forward_z = self.ego_state.forward_z + self.config.oncoming_spawn_distance_m + (
+                traffic_bias * 35.0
+            )
+            self.oncoming_state.speed_mps = target_speed
+
     def _update_flags(self, sensed_distance: float) -> None:
         actual_distance = self.front_state.forward_z - self.ego_state.forward_z
-        lateral_gap = abs(self.front_state.lateral_x - self.ego_state.lateral_x)
-        self.collision = actual_distance <= self.config.collision_distance_m and lateral_gap <= self.config.same_lane_threshold_m
-        self.lane_departure = abs(self.ego_state.lateral_x) >= self.config.lane_departure_limit_m
+        ego_lane = self._ego_lane_id()
+        front_lane = self._front_lane_id()
+        self.collision = (
+            ego_lane == front_lane
+            and actual_distance >= 0.0
+            and actual_distance <= self.config.collision_distance_m
+        )
+
+        oncoming_distance = self._oncoming_distance()
+        oncoming_collision = (
+            ego_lane == self._oncoming_lane_id()
+            and oncoming_distance >= 0.0
+            and oncoming_distance <= self.config.collision_distance_m
+        )
+        self.collision = self.collision or oncoming_collision
+
+        self.lane_departure = abs(self._ego_visual_x()) >= self.world.offroad_limit_x()
+        self._update_overtake_analysis()
 
     def _sync_visuals(self) -> None:
-        self.ego_visual.sync_ego(self.ego_state, self.config.steering_visual_yaw_deg)
-        self.front_visual.sync_traffic(self.front_state)
+        lane_visual_offset = self.config.ego_lane_visual_offset_m
+        lane_visual_scale = self.config.lane_visual_scale
+        ego_height, ego_pitch = self.world.road_height_and_pitch(self.ego_state.forward_z)
+        front_height, front_pitch = self.world.road_height_and_pitch(self.front_state.forward_z)
+        oncoming_height, oncoming_pitch = self.world.road_height_and_pitch(self.oncoming_state.forward_z)
+        self.ego_visual.sync_ego(
+            self.ego_state,
+            self.config.steering_visual_yaw_deg,
+            lane_visual_offset,
+            lane_visual_scale,
+            ego_height,
+            ego_pitch,
+        )
+        self.front_visual.sync_traffic(
+            self.front_state,
+            lane_visual_offset,
+            lane_visual_scale,
+            front_height,
+            front_pitch,
+        )
+        self.oncoming_visual.sync_traffic(
+            self.oncoming_state,
+            -lane_visual_offset,
+            lane_visual_scale,
+            oncoming_height,
+            oncoming_pitch,
+            180.0,
+        )
         self.ego_visual.set_brake_lights(self.last_applied_command.brake > 0.2)
         self.world.update_debug_visuals(
             self.ego_state,
             self.front_state,
             self._front_distance(),
             self.debug_enabled,
+            lane_visual_offset,
         )
         self.world.set_lane_center_visible(self.centerline_visible)
 
     def _status_style(self) -> tuple[str, object]:
         if self.collision:
             return "ÇARPIŞMA", color.red
+        if self.dangerous_overtake:
+            return "TEHLİKELİ SOLLAMA", color.orange
         if self.lane_departure:
             return "ŞERİT İHLALİ", color.orange
         if self.last_fuzzy_subsystems["risk"] >= self.config.status_high_risk_threshold:
@@ -558,6 +822,7 @@ class SimulationManager:
             f"Ofset {self.ego_state.lateral_x:4.2f} m | Risk {self.last_fuzzy_subsystems['risk']:5.1f}",
             f"Şerit {self.last_fuzzy_subsystems['lane']:5.1f} | Konfor {self.last_fuzzy_subsystems['comfort']:5.1f}",
             f"Gaz {self.last_applied_command.throttle:4.2f} | Fren {self.last_applied_command.brake:4.2f} | Dir {self.last_applied_command.steering:4.2f}",
+            f"Karşı {self._oncoming_distance():4.1f} m | Sollama {self.overtake_state_label}",
             f"Yol {self.environment_state.road_condition:4.2f} | Eğim {self.environment_state.slope:4.1f} | Trafik {self.environment_state.traffic_density:4.2f}",
         ]
 
@@ -602,31 +867,44 @@ class SimulationManager:
             ]
 
         engine_outputs = [
-            ("RİSK", self.last_engine_results["risk"].output("risk_level").activations),
-            ("ŞERİT", self.last_engine_results["lane"].output("lane_stability").activations),
-            ("KONFOR", self.last_engine_results["comfort"].output("comfort_efficiency").activations),
-            ("FREN", self.last_engine_results["meta"].output("brake_command").activations),
+            ("RİSK", self.last_engine_results["risk"].output("risk_level").activations, False),
+            ("ŞERİT", self.last_engine_results["lane"].output("lane_stability").activations, False),
+            ("KONFOR", self.last_engine_results["comfort"].output("comfort_efficiency").activations, True),
+            ("FREN", self.last_engine_results["meta"].output("brake_command").activations, False),
         ]
 
         lines = []
-        for title, activations in engine_outputs:
+        for title, activations, prefer_slope_rule in engine_outputs:
             ranked = [
                 activation
                 for activation in sorted(activations, key=lambda item: item.firing_strength, reverse=True)
                 if activation.firing_strength > 0.0
-            ][:1]
+            ]
             lines.append(f"{title}:")
             if not ranked:
                 lines.append("  aktif kural yok")
                 continue
-            activation = ranked[0]
-            lines.append(
-                f"  Neden: {self._summarize_activation_reason(activation)}"
-            )
-            lines.append(
-                f"  Karar: {self._pretty_consequent(activation.consequent_label)} "
-                f"({activation.firing_strength:.2f})"
-            )
+            display_activations = [ranked[0]]
+            if prefer_slope_rule:
+                slope_activation = next(
+                    (
+                        activation
+                        for activation in ranked[1:]
+                        if any(key.startswith("road_slope.") for key in activation.antecedent_memberships)
+                    ),
+                    None,
+                )
+                if slope_activation is not None:
+                    display_activations.append(slope_activation)
+
+            for activation in display_activations[:2]:
+                lines.append(
+                    f"  Neden: {self._summarize_activation_reason(activation)}"
+                )
+                lines.append(
+                    f"  Karar: {self._pretty_consequent(activation.consequent_label)} "
+                    f"({activation.firing_strength:.2f})"
+                )
         return lines
 
     def _scenario_display_name(self) -> str:

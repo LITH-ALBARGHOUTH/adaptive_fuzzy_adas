@@ -32,7 +32,7 @@ def _plot_activation_bars(ax, title, activations, plot_config: PlotConfig) -> No
     ax.invert_yaxis()
     ax.set_xlim(0.0, 1.0)
     ax.set_title(title)
-    ax.set_xlabel("firing strength")
+    ax.set_xlabel("ateşleme gücü")
     ax.grid(axis="x", alpha=0.25)
     style_axis(ax, plot_config)
 
@@ -50,31 +50,31 @@ def plot_rule_activation_overview(
 
     _plot_activation_bars(
         axes[0],
-        "Collision Risk Rules",
+        "Çarpışma Riski Kuralları",
         record.engine_results["risk"].output("risk_level").activations,
         plot_config,
     )
     _plot_activation_bars(
         axes[1],
-        "Lane Stability Rules",
+        "Şerit Kararlılığı Kuralları",
         record.engine_results["lane"].output("lane_stability").activations,
         plot_config,
     )
     _plot_activation_bars(
         axes[2],
-        "Comfort Efficiency Rules",
+        "Konfor Verimlilik Kuralları",
         record.engine_results["comfort"].output("comfort_efficiency").activations,
         plot_config,
     )
     _plot_activation_bars(
         axes[3],
-        "Meta Brake Rules",
+        "Meta Fren Kuralları",
         record.engine_results["meta"].output("brake_command").activations,
         plot_config,
     )
 
     fig.suptitle(
-        "Rule Activation Overview for One Controller Evaluation",
+        "Tek Bir Kontrol Değerlendirmesi İçin Kural Ateşleme Özeti",
         fontsize=plot_config.title_font_size,
     )
     fig.subplots_adjust(left=0.25, right=0.98, top=0.90, bottom=0.08, wspace=0.55, hspace=0.35)

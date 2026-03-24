@@ -98,17 +98,37 @@ class VehicleVisual(Entity):
                     )
                 )
 
-    def sync_ego(self, state: EgoVehicleState, visual_yaw_scale: float) -> None:
+    def sync_ego(
+        self,
+        state: EgoVehicleState,
+        visual_yaw_scale: float,
+        lane_visual_offset: float = 0.0,
+        lane_visual_scale: float = 1.0,
+        road_height: float = 0.0,
+        road_pitch_deg: float = 0.0,
+    ) -> None:
         """Update transform from the ego state."""
 
-        self.position = (state.lateral_x, 0.0, state.forward_z)
+        visual_x = lane_visual_offset + (state.lateral_x * lane_visual_scale)
+        self.position = (visual_x, road_height, state.forward_z)
         self.rotation_y = state.heading_deg + (state.steering_state * visual_yaw_scale)
+        self.rotation_x = road_pitch_deg
 
-    def sync_traffic(self, state: TrafficVehicleState) -> None:
+    def sync_traffic(
+        self,
+        state: TrafficVehicleState,
+        lane_visual_offset: float = 0.0,
+        lane_visual_scale: float = 1.0,
+        road_height: float = 0.0,
+        road_pitch_deg: float = 0.0,
+        heading_y: float = 0.0,
+    ) -> None:
         """Update transform from an NPC state."""
 
-        self.position = (state.lateral_x, 0.0, state.forward_z)
-        self.rotation_y = 0.0
+        visual_x = lane_visual_offset + (state.lateral_x * lane_visual_scale)
+        self.position = (visual_x, road_height, state.forward_z)
+        self.rotation_y = heading_y
+        self.rotation_x = road_pitch_deg
         self.set_brake_lights(state.braking)
 
     def set_brake_lights(self, active: bool) -> None:

@@ -50,11 +50,11 @@ def show_live_simulation(
     vehicle_length = 4.2
     vehicle_width = 1.8
 
-    ax_scene.set_title(f"Live Simulation: {result.scenario.name}")
+    ax_scene.set_title(f"Canlı Simülasyon: {result.scenario.name}")
     ax_scene.set_xlim(scene_x_min, scene_x_max)
     ax_scene.set_ylim(-3.0, 3.0)
-    ax_scene.set_xlabel("relative longitudinal position (m)")
-    ax_scene.set_ylabel("lateral position (m)")
+    ax_scene.set_xlabel("göreli boylamsal konum (m)")
+    ax_scene.set_ylabel("yatay konum (m)")
     ax_scene.grid(alpha=0.2)
     style_axis(ax_scene, plot_config)
 
@@ -68,7 +68,7 @@ def show_live_simulation(
         vehicle_width,
         color="tab:blue",
         alpha=0.85,
-        label="ego vehicle",
+        label="ego araç",
     )
     front_patch = Rectangle(
         (10.0 - vehicle_length / 2.0, -vehicle_width / 2.0),
@@ -76,7 +76,7 @@ def show_live_simulation(
         vehicle_width,
         color="tab:orange",
         alpha=0.85,
-        label="front vehicle",
+        label="ön araç",
     )
     ax_scene.add_patch(ego_patch)
     ax_scene.add_patch(front_patch)
@@ -103,39 +103,39 @@ def show_live_simulation(
         bbox={"boxstyle": "round", "facecolor": "#f8fbff", "alpha": 0.92},
     )
 
-    speed_line, = ax_speed.plot([], [], color="tab:blue", linewidth=2, label="ego speed")
-    distance_line, = ax_speed.plot([], [], color="tab:orange", linewidth=2, label="distance")
-    ax_speed.set_title("Speed and Distance")
+    speed_line, = ax_speed.plot([], [], color="tab:blue", linewidth=2, label="ego hızı")
+    distance_line, = ax_speed.plot([], [], color="tab:orange", linewidth=2, label="mesafe")
+    ax_speed.set_title("Hız ve Mesafe")
     ax_speed.set_xlim(times[0], times[-1] if len(times) > 1 else times[0] + 1.0)
     speed_upper = max(max(speeds, default=0.0), max(distances, default=0.0), 1.0) * 1.1
     ax_speed.set_ylim(0.0, speed_upper)
-    ax_speed.set_xlabel("time (s)")
-    ax_speed.set_ylabel("value")
+    ax_speed.set_xlabel("zaman (s)")
+    ax_speed.set_ylabel("deger")
     ax_speed.grid(alpha=0.25)
     ax_speed.legend(loc="upper right")
     style_axis(ax_speed, plot_config)
 
     risk_line, = ax_risk.plot([], [], color="tab:red", linewidth=2, label="risk")
-    lane_line, = ax_risk.plot([], [], color="tab:green", linewidth=2, label="lane deviation")
-    ax_risk.set_title("Risk and Lane Deviation")
+    lane_line, = ax_risk.plot([], [], color="tab:green", linewidth=2, label="şerit sapması")
+    ax_risk.set_title("Risk ve Şerit Sapması")
     ax_risk.set_xlim(times[0], times[-1] if len(times) > 1 else times[0] + 1.0)
     risk_upper = max(max(risks, default=0.0), 100.0)
     lane_upper = max(abs(min(lane_deviations, default=0.0)), abs(max(lane_deviations, default=0.0)), 2.0)
     ax_risk.set_ylim(min(-2.5, -lane_upper * 1.1), max(risk_upper * 1.05, lane_upper * 1.1))
-    ax_risk.set_xlabel("time (s)")
-    ax_risk.set_ylabel("value")
+    ax_risk.set_xlabel("zaman (s)")
+    ax_risk.set_ylabel("deger")
     ax_risk.grid(alpha=0.25)
     ax_risk.legend(loc="upper right")
     style_axis(ax_risk, plot_config)
 
-    throttle_line, = ax_controls.plot([], [], color="tab:purple", linewidth=2, label="throttle")
-    brake_line, = ax_controls.plot([], [], color="tab:brown", linewidth=2, label="brake")
-    steering_line, = ax_controls.plot([], [], color="tab:gray", linewidth=2, label="steering")
-    ax_controls.set_title("Control Signals")
+    throttle_line, = ax_controls.plot([], [], color="tab:purple", linewidth=2, label="gaz")
+    brake_line, = ax_controls.plot([], [], color="tab:brown", linewidth=2, label="fren")
+    steering_line, = ax_controls.plot([], [], color="tab:gray", linewidth=2, label="direksiyon")
+    ax_controls.set_title("Kontrol Sinyalleri")
     ax_controls.set_xlim(times[0], times[-1] if len(times) > 1 else times[0] + 1.0)
     ax_controls.set_ylim(-1.1, 1.1)
-    ax_controls.set_xlabel("time (s)")
-    ax_controls.set_ylabel("command")
+    ax_controls.set_xlabel("zaman (s)")
+    ax_controls.set_ylabel("komut")
     ax_controls.grid(alpha=0.25)
     ax_controls.legend(loc="upper right")
     style_axis(ax_controls, plot_config)
@@ -143,16 +143,16 @@ def show_live_simulation(
     def _format_top_rules(frame_record) -> str:
         engine_map = [
             ("Risk", frame_record.engine_results["risk"].output("risk_level").activations),
-            ("Lane", frame_record.engine_results["lane"].output("lane_stability").activations),
-            ("Comfort", frame_record.engine_results["comfort"].output("comfort_efficiency").activations),
-            ("Brake", frame_record.engine_results["meta"].output("brake_command").activations),
+            ("Şerit", frame_record.engine_results["lane"].output("lane_stability").activations),
+            ("Konfor", frame_record.engine_results["comfort"].output("comfort_efficiency").activations),
+            ("Fren", frame_record.engine_results["meta"].output("brake_command").activations),
         ]
-        lines = ["Top Rule Activations"]
+        lines = ["En Güçlü Kural Ateşlemeleri"]
         for label, activations in engine_map:
             ranked = [item for item in sorted(activations, key=lambda item: item.firing_strength, reverse=True) if item.firing_strength > 0.0][:2]
             lines.append(f"{label}:")
             if not ranked:
-                lines.append("  - no active rule")
+                lines.append("  - aktif kural yok")
                 continue
             for activation in ranked:
                 lines.append(
@@ -184,13 +184,13 @@ def show_live_simulation(
             "\n".join(
                 [
                     f"t = {record.time_s:.1f} s",
-                    f"speed = {ego.speed:.2f} m/s",
-                    f"distance = {front_relative_x:.2f} m",
+                    f"hız = {ego.speed:.2f} m/s",
+                    f"mesafe = {front_relative_x:.2f} m",
                     f"risk = {record.subsystem_outputs['risk']:.2f}",
-                    f"lane y = {ego.y_position:.2f} m",
-                    f"throttle = {record.final_command_outputs['throttle']:.2f}",
-                    f"brake = {record.final_command_outputs['brake']:.2f}",
-                    f"steering = {record.final_command_outputs['steering']:.2f}",
+                    f"şerit y = {ego.y_position:.2f} m",
+                    f"gaz = {record.final_command_outputs['throttle']:.2f}",
+                    f"fren = {record.final_command_outputs['brake']:.2f}",
+                    f"direksiyon = {record.final_command_outputs['steering']:.2f}",
                 ]
             )
         )

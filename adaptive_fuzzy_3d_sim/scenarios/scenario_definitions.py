@@ -173,5 +173,26 @@ def build_scenarios() -> Dict[str, ScenarioDefinition]:
             environment_profile=_windowed_environment(1.00, -0.5, 0.05, []),
             lane_disturbance_profile=_sinusoidal_lane_rate(0.01, 0.5),
         ),
+        ScenarioDefinition(
+            name="uphill_grade_challenge",
+            description="A sustained uphill climb with growing traffic and a slowing lead vehicle.",
+            duration_s=duration,
+            ego_initial=EgoVehicleState(lateral_x=0.02, forward_z=0.0, speed_mps=21.0),
+            front_initial=TrafficVehicleState(lateral_x=0.0, forward_z=48.0, speed_mps=22.0),
+            environment_initial=EnvironmentState(road_condition=0.82, slope=3.0, traffic_density=0.20),
+            interpretation_hint="This scenario highlights how uphill grade suppresses comfort bias and encourages safer longitudinal control.",
+            front_acceleration_profile=_windowed_acceleration(0.0, [(8.0, 12.0, -1.6), (14.0, 17.0, -0.8)]),
+            environment_profile=_windowed_environment(
+                0.82,
+                3.0,
+                0.20,
+                [
+                    (4.0, 9.0, {"slope": 5.5, "traffic_density": 0.28}),
+                    (9.0, 15.0, {"slope": 8.0, "traffic_density": 0.34, "road_condition": 0.74}),
+                    (15.0, 20.0, {"slope": 4.5, "traffic_density": 0.24}),
+                ],
+            ),
+            lane_disturbance_profile=_sinusoidal_lane_rate(0.012, 0.7),
+        ),
     ]
     return {scenario.name: scenario for scenario in scenarios}

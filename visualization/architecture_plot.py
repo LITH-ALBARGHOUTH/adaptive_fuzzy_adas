@@ -55,19 +55,19 @@ def plot_system_architecture_diagram(output_dir: Path, plot_config: PlotConfig) 
     ax.set_ylim(0.0, 1.0)
     ax.axis("off")
 
-    _box(ax, (0.05, 0.40), 0.20, 0.18, "Sensor Inputs\nspeed, distance,\nlane, road, slope,\ntraffic, stability", "#d7ebff")
-    _box(ax, (0.34, 0.70), 0.22, 0.14, "Collision Risk\nEngine", "#ffe1d6")
-    _box(ax, (0.34, 0.43), 0.22, 0.14, "Lane Stability\nEngine", "#e5f7da")
-    _box(ax, (0.34, 0.16), 0.22, 0.14, "Comfort / Efficiency\nEngine", "#fff0c9")
-    _box(ax, (0.66, 0.42), 0.20, 0.18, "Meta Decision\nEngine", "#eadcff")
-    _box(ax, (0.88, 0.42), 0.10, 0.18, "Vehicle\nDynamics", "#dce8f0")
+    _box(ax, (0.05, 0.40), 0.20, 0.18, "Sensör Girişleri\nhız, mesafe,\nşerit, yol, eğim,\ntrafik, kararlılık", "#d7ebff")
+    _box(ax, (0.34, 0.70), 0.22, 0.14, "Çarpışma Riski\nMotoru", "#ffe1d6")
+    _box(ax, (0.34, 0.43), 0.22, 0.14, "Şerit Kararlılığı\nMotoru", "#e5f7da")
+    _box(ax, (0.34, 0.16), 0.22, 0.14, "Konfor / Verim\nMotoru", "#fff0c9")
+    _box(ax, (0.66, 0.42), 0.20, 0.18, "Meta Karar\nMotoru", "#eadcff")
+    _box(ax, (0.88, 0.42), 0.10, 0.18, "Araç\nDinamikleri", "#dce8f0")
 
-    ax.text(0.60, 0.63, "risk level", fontsize=10, ha="center")
-    ax.text(0.60, 0.50, "lane stability", fontsize=10, ha="center")
-    ax.text(0.60, 0.37, "comfort-efficiency", fontsize=10, ha="center")
-    ax.text(0.77, 0.64, "throttle", fontsize=10, ha="center")
-    ax.text(0.77, 0.52, "brake", fontsize=10, ha="center")
-    ax.text(0.77, 0.40, "steering", fontsize=10, ha="center")
+    ax.text(0.60, 0.63, "risk seviyesi", fontsize=10, ha="center")
+    ax.text(0.60, 0.50, "şerit kararlılığı", fontsize=10, ha="center")
+    ax.text(0.60, 0.37, "konfor-verim", fontsize=10, ha="center")
+    ax.text(0.77, 0.64, "gaz", fontsize=10, ha="center")
+    ax.text(0.77, 0.52, "fren", fontsize=10, ha="center")
+    ax.text(0.77, 0.40, "direksiyon", fontsize=10, ha="center")
 
     _arrow(ax, (0.25, 0.49), (0.34, 0.77))
     _arrow(ax, (0.25, 0.49), (0.34, 0.50))
@@ -81,7 +81,7 @@ def plot_system_architecture_diagram(output_dir: Path, plot_config: PlotConfig) 
     ax.text(
         0.52,
         0.93,
-        "Hierarchical Fuzzy ADAS Architecture",
+        "Hiyerarşik Bulanık ADAS Mimarisi",
         ha="center",
         fontsize=plot_config.title_font_size,
         weight="bold",
@@ -89,7 +89,7 @@ def plot_system_architecture_diagram(output_dir: Path, plot_config: PlotConfig) 
     ax.text(
         0.53,
         0.07,
-        "Closed-loop flow: sensor inputs -> subsystem fuzzification/inference -> meta arbitration -> vehicle response -> new inputs",
+        "Kapalı döngü akış: sensör girişleri -> alt sistem bulanıklaştırma/çıkarım -> meta uzlaştırma -> araç tepkisi -> yeni girişler",
         ha="center",
         fontsize=plot_config.annotation_font_size,
     )

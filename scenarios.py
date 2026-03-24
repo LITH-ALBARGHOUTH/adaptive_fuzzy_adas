@@ -246,6 +246,39 @@ def boundary_open_road() -> ScenarioDefinition:
     )
 
 
+def uphill_grade_challenge() -> ScenarioDefinition:
+    duration = get_default_simulation_config().default_duration_s
+    return ScenarioDefinition(
+        name="uphill_grade_challenge",
+        description="A sustained uphill climb with growing traffic and a slowing lead vehicle.",
+        duration_s=duration,
+        ego_initial=EgoVehicleState(x_position=0.0, y_position=0.02, speed=21.0),
+        front_initial=FrontVehicleState(x_position=48.0, speed=22.0),
+        environment_initial=EnvironmentState(road_condition=0.82, slope=1.0, traffic_density=0.35),
+        interpretation_hint="This scenario highlights how uphill grade suppresses comfort bias and encourages safer longitudinal control.",
+        front_acceleration_profile=_windowed_acceleration(0.0, [(8.0, 12.0, -1.6), (14.0, 17.0, -0.8)]),
+        environment_profile=_windowed_environment(
+            0.82,
+            1.0,
+            0.35,
+            [
+                (4.0, 9.0, {"slope": 4.0, "traffic_density": 0.45}),
+                (9.0, 15.0, {"slope": 6.5, "traffic_density": 0.60, "road_condition": 0.74}),
+                (15.0, 20.0, {"slope": 3.0, "traffic_density": 0.42}),
+            ],
+        ),
+        lane_disturbance_profile=_sinusoidal_lane_rate(0.012, 0.7),
+        expectation=ScenarioExpectation(
+            description="The uphill climb should reduce comfort bias and keep throttle moderate while preserving safety.",
+            max_peak_throttle=0.35,
+            min_peak_brake=0.18,
+            min_minimum_distance=40.0,
+            expect_collision=False,
+            expect_lane_departure=False,
+        ),
+    )
+
+
 def get_predefined_scenarios() -> Dict[str, ScenarioDefinition]:
     """Return all required scenarios."""
 
@@ -257,5 +290,6 @@ def get_predefined_scenarios() -> Dict[str, ScenarioDefinition]:
         conflicting_tradeoff(),
         boundary_stop_and_go(),
         boundary_open_road(),
+        uphill_grade_challenge(),
     ]
     return {scenario.name: scenario for scenario in scenarios}

@@ -16,13 +16,14 @@ def _scenario_label(name: str) -> str:
     """Shorten scenario names for crowded legends."""
 
     labels = {
-        "normal_driving": "normal",
-        "high_speed_short_distance": "high-speed short-gap",
-        "large_lane_deviation": "large lane dev",
-        "poor_road_condition": "poor road",
-        "conflicting_tradeoff": "tradeoff",
-        "boundary_stop_and_go": "stop-go",
-        "boundary_open_road": "open road",
+        "normal_driving": "normal sürüş",
+        "high_speed_short_distance": "yüksek hız kısa mesafe",
+        "large_lane_deviation": "büyük şerit sapması",
+        "poor_road_condition": "kötü yol",
+        "conflicting_tradeoff": "çatışmalı karar",
+        "boundary_stop_and_go": "dur kalk",
+        "boundary_open_road": "açık yol",
+        "uphill_grade_challenge": "yokuş tırmanışı",
     }
     return labels.get(name, name.replace("_", " "))
 
@@ -46,40 +47,40 @@ def plot_scenario_timeseries(
 
     figure, axes = plt.subplots(5, 1, figsize=plot_config.figure_size, sharex=True)
 
-    axes[0].plot(time, speed, color="tab:blue", label="ego speed")
-    axes[0].set_title(f"{result.scenario.name}: Speed vs Time")
-    axes[0].set_ylabel("speed (m/s)")
+    axes[0].plot(time, speed, color="tab:blue", label="ego hızı")
+    axes[0].set_title(f"{_scenario_label(result.scenario.name).title()}: Hıza Göre Zaman")
+    axes[0].set_ylabel("hız (m/s)")
     axes[0].legend()
     axes[0].grid(alpha=0.25)
     style_axis(axes[0], plot_config)
 
-    axes[1].plot(time, distance, color="tab:orange", label="front distance")
-    axes[1].set_title("Distance vs Time")
-    axes[1].set_ylabel("distance (m)")
+    axes[1].plot(time, distance, color="tab:orange", label="on mesafe")
+    axes[1].set_title("Mesafeye Göre Zaman")
+    axes[1].set_ylabel("mesafe (m)")
     axes[1].legend()
     axes[1].grid(alpha=0.25)
     style_axis(axes[1], plot_config)
 
     axes[2].plot(time, risk, color="tab:red", label="risk")
-    axes[2].set_title("Risk vs Time")
+    axes[2].set_title("Riske Göre Zaman")
     axes[2].set_ylabel("risk")
     axes[2].legend()
     axes[2].grid(alpha=0.25)
     style_axis(axes[2], plot_config)
 
-    axes[3].plot(time, lane_deviation, color="tab:green", label="lane deviation")
-    axes[3].set_title("Lane Deviation vs Time")
-    axes[3].set_ylabel("lane deviation (m)")
+    axes[3].plot(time, lane_deviation, color="tab:green", label="şerit sapması")
+    axes[3].set_title("Şerit Sapmasına Göre Zaman")
+    axes[3].set_ylabel("şerit sapması (m)")
     axes[3].legend()
     axes[3].grid(alpha=0.25)
     style_axis(axes[3], plot_config)
 
-    axes[4].plot(time, throttle, label="throttle", color="tab:purple")
-    axes[4].plot(time, brake, label="brake", color="tab:brown")
-    axes[4].plot(time, steering, label="steering", color="tab:gray")
-    axes[4].set_title("Control Signals vs Time")
-    axes[4].set_xlabel("time (s)")
-    axes[4].set_ylabel("command")
+    axes[4].plot(time, throttle, label="gaz", color="tab:purple")
+    axes[4].plot(time, brake, label="fren", color="tab:brown")
+    axes[4].plot(time, steering, label="direksiyon", color="tab:gray")
+    axes[4].set_title("Kontrol Sinyallerine Göre Zaman")
+    axes[4].set_xlabel("zaman (s)")
+    axes[4].set_ylabel("komut")
     axes[4].legend()
     axes[4].grid(alpha=0.25)
     style_axis(axes[4], plot_config)
@@ -115,17 +116,17 @@ def plot_scenario_comparison(
         axes[2].plot(time, risk, label=label)
         axes[3].plot(time, lane, label=label)
 
-    axes[0].set_title("Speed Comparison")
-    axes[0].set_ylabel("speed (m/s)")
-    axes[1].set_title("Distance Comparison")
-    axes[1].set_ylabel("distance (m)")
-    axes[2].set_title("Risk Comparison")
+    axes[0].set_title("Hız Karşılaştırması")
+    axes[0].set_ylabel("hız (m/s)")
+    axes[1].set_title("Mesafe Karşılaştırması")
+    axes[1].set_ylabel("mesafe (m)")
+    axes[2].set_title("Risk Karşılaştırması")
     axes[2].set_ylabel("risk")
-    axes[3].set_title("Lane Deviation Comparison")
-    axes[3].set_ylabel("lane deviation (m)")
+    axes[3].set_title("Şerit Sapması Karşılaştırması")
+    axes[3].set_ylabel("şerit sapması (m)")
 
     for axis in axes:
-        axis.set_xlabel("time (s)")
+        axis.set_xlabel("zaman (s)")
         axis.legend(fontsize=plot_config.legend_font_size, loc="best", framealpha=0.92)
         axis.grid(alpha=0.25)
         style_axis(axis, plot_config)

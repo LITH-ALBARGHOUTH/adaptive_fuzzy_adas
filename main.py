@@ -9,9 +9,14 @@ from typing import Sequence
 from config import get_default_fuzzy_config, get_default_plot_config, get_default_simulation_config
 from scenarios import get_predefined_scenarios
 from simulation import HierarchicalFuzzyADASController, run_simulation
-from utils import ensure_directory, print_scenario_report
+from utils import ensure_directory, print_scenario_report, select_representative_record
+from visualization.architecture_plot import plot_system_architecture_diagram
+from visualization.defuzzification_plot import plot_example_defuzzifications
 from visualization.live_simulation import show_live_simulation
+from visualization.membership_plots import plot_all_memberships, plot_membership_sensitivity
+from visualization.rule_activation import plot_rule_activation_overview
 from visualization.scenario_plots import plot_scenario_comparison, plot_scenario_timeseries
+from visualization.surface_plots import plot_collision_risk_surface, plot_meta_brake_contour
 
 
 def build_argument_parser(scenario_names: Sequence[str]) -> argparse.ArgumentParser:
@@ -128,6 +133,16 @@ def main() -> None:
 
     if not args.skip_plots and len(results) > 1:
         plot_scenario_comparison(results, output_dir, plot_config)
+
+    if not args.skip_plots and results:
+        representative_record = select_representative_record(results)
+        plot_system_architecture_diagram(output_dir, plot_config)
+        plot_all_memberships(controller, output_dir, plot_config)
+        plot_rule_activation_overview(representative_record, output_dir, plot_config)
+        plot_example_defuzzifications(representative_record, output_dir, plot_config)
+        plot_collision_risk_surface(controller, output_dir, plot_config)
+        plot_meta_brake_contour(controller, output_dir, plot_config)
+        plot_membership_sensitivity(fuzzy_config, output_dir, plot_config)
 
     if not args.no_live and len(results) == 1:
         only_result = next(iter(results.values()))

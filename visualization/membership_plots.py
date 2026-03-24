@@ -15,6 +15,64 @@ from simulation import HierarchicalFuzzyADASController
 from visualization.plot_style import apply_plot_style, style_axis
 
 
+def _label_tr(text: str) -> str:
+    mapping = {
+        "collision": "çarpışma",
+        "lane": "şerit",
+        "comfort": "konfor",
+        "meta": "meta",
+        "speed": "hız",
+        "front_distance": "ön_mesafe",
+        "road_condition": "yol_koşulu",
+        "risk_level": "risk_seviyesi",
+        "lane_deviation": "şerit_sapması",
+        "steering_stability": "direksiyon_kararlılığı",
+        "lane_stability": "şerit_kararlılığı",
+        "road_slope": "yol_eğimi",
+        "traffic_density": "trafik_yoğunluğu",
+        "comfort_efficiency": "konfor_verimlilik",
+        "current_speed": "anlık_hız",
+        "throttle_command": "gaz_komutu",
+        "brake_command": "fren_komutu",
+        "steering_correction": "direksiyon_düzeltmesi",
+        "membership": "üyelik",
+        "low": "düşük",
+        "medium": "orta",
+        "high": "yüksek",
+        "critical": "kritik",
+        "close": "yakın",
+        "far": "uzak",
+        "poor": "kötü",
+        "normal": "normal",
+        "good": "iyi",
+        "far_left": "çok_sol",
+        "left": "sol",
+        "centered": "merkez",
+        "right": "sağ",
+        "far_right": "çok_sağ",
+        "unstable": "dengesiz",
+        "stable": "kararlı",
+        "strong_left": "sert_sol",
+        "strong_right": "sert_sağ",
+        "downhill": "iniş",
+        "flat": "düz",
+        "uphill": "yokuş",
+        "light": "hafif",
+        "moderate": "orta",
+        "heavy": "yoğun",
+        "zero": "sıfır",
+        "none": "yok",
+        "hard": "sert",
+        "keep": "koru",
+        "steer_left": "sola_kır",
+        "steer_left_hard": "sert_sola_kır",
+        "steer_right": "sağa_kır",
+        "steer_right_hard": "sert_sağa_kır",
+        "strong": "güçlü",
+    }
+    return mapping.get(text, text)
+
+
 def plot_all_memberships(
     controller: HierarchicalFuzzyADASController,
     output_dir: Path,
@@ -39,10 +97,10 @@ def plot_all_memberships(
 
         for ax, variable in zip(axes_array.flat, variables):
             for label, membership in variable.terms.items():
-                ax.plot(variable.universe, membership, linewidth=2, label=label.replace("_", " "))
-            ax.set_title(variable.name.replace("_", " ").title())
-            ax.set_xlabel(variable.name.replace("_", " "))
-            ax.set_ylabel("membership")
+                ax.plot(variable.universe, membership, linewidth=2, label=_label_tr(label).replace("_", " "))
+            ax.set_title(_label_tr(variable.name).replace("_", " ").title())
+            ax.set_xlabel(_label_tr(variable.name).replace("_", " "))
+            ax.set_ylabel("üyelik")
             ax.set_ylim(-0.02, 1.05)
             ax.grid(alpha=0.25)
             ax.legend(fontsize=plot_config.legend_font_size, loc="upper right")
@@ -52,7 +110,7 @@ def plot_all_memberships(
             ax.axis("off")
 
         fig.suptitle(
-            f"{engine_name.title()} Engine Membership Functions",
+            f"{_label_tr(engine_name).title()} Motoru Üyelik Fonksiyonları",
             fontsize=plot_config.title_font_size,
         )
         fig.tight_layout(pad=1.4)
@@ -87,9 +145,9 @@ def plot_membership_sensitivity(
 
     fig, ax = plt.subplots(figsize=(9, 5))
     ax.plot(shoulder_values, risk_values, color="tab:red", marker="o", linewidth=2)
-    ax.set_title("Sensitivity of Collision Risk to Close-Distance Membership Shoulder")
-    ax.set_xlabel("close-distance trapezoid upper shoulder (m)")
-    ax.set_ylabel("risk_level output")
+    ax.set_title("Çarpışma Riskinin Yakın Mesafe Üyelik Omzuna Duyarlılığı")
+    ax.set_xlabel("yakın mesafe yamuk üst omzu (m)")
+    ax.set_ylabel("risk seviyesi çıkışı")
     ax.grid(alpha=0.3)
     style_axis(ax, plot_config)
     fig.tight_layout(pad=1.2)
