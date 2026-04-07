@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 import textwrap
 
 import matplotlib.pyplot as plt
@@ -13,10 +14,58 @@ from utils import SimulationStepRecord
 from visualization.plot_style import apply_plot_style, style_axis
 
 
-def _pretty_rule_label(rule_name: str, width: int = 20) -> str:
-    """Convert long internal rule ids into wrapped plot labels."""
+RULE_TERM_TRANSLATIONS = [
+    ("medium_gap", "orta mesafe"),
+    ("highspeed", "yüksek hız"),
+    ("medspeed", "orta hız"),
+    ("lowspeed", "düşük hız"),
+    ("highrisk", "yüksek risk"),
+    ("mediumrisk", "orta risk"),
+    ("lowrisk", "düşük risk"),
+    ("goodroad", "iyi yol"),
+    ("poorroad", "kötü yol"),
+    ("normalroad", "normal yol"),
+    ("farright", "çok sağ"),
+    ("farleft", "çok sol"),
+    ("strongright", "sert sağ"),
+    ("strongleft", "sert sol"),
+    ("highcomfort", "yüksek konfor"),
+    ("mediumcomfort", "orta konfor"),
+    ("lowcomfort", "düşük konfor"),
+    ("centered", "merkez"),
+    ("unstable", "dengesiz"),
+    ("stable", "kararlı"),
+    ("downhill", "iniş"),
+    ("uphill", "yokuş"),
+    ("traffic", "trafik"),
+    ("lateral", "yanal"),
+    ("baseline", "temel"),
+    ("critical", "kritik"),
+    ("moderate", "orta"),
+    ("medium", "orta"),
+    ("heavy", "yoğun"),
+    ("light", "hafif"),
+    ("close", "yakın"),
+    ("right", "sağ"),
+    ("left", "sol"),
+    ("flat", "düz"),
+    ("road", "yol"),
+    ("speed", "hız"),
+    ("risk", "risk"),
+    ("high", "yüksek"),
+    ("low", "düşük"),
+    ("far", "uzak"),
+]
 
-    label = rule_name.replace("_", " ")
+
+def _pretty_rule_label(rule_name: str, width: int = 20) -> str:
+    """Convert long internal rule ids into wrapped Turkish plot labels."""
+
+    label = re.sub(r"^[a-z]+\d+_", "", rule_name)
+    for source, target in RULE_TERM_TRANSLATIONS:
+        label = label.replace(source, target)
+    label = label.replace("_", ", ")
+    label = re.sub(r"\s+", " ", label).strip(" ,")
     return textwrap.fill(label, width=width)
 
 
