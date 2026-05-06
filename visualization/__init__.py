@@ -4,6 +4,7 @@ from .architecture_plot import plot_system_architecture_diagram
 from .defuzzification_plot import plot_example_defuzzifications
 from .live_simulation import show_live_simulation
 from .membership_plots import plot_all_memberships, plot_membership_sensitivity
+from .neuro_fuzzy_plots import plot_neuro_fuzzy_adaptation
 from .rule_activation import plot_rule_activation_overview
 from .scenario_plots import plot_scenario_comparison, plot_scenario_timeseries
 from .surface_plots import plot_collision_risk_surface, plot_meta_brake_contour
@@ -13,6 +14,7 @@ __all__ = [
     "plot_system_architecture_diagram",
     "plot_all_memberships",
     "plot_membership_sensitivity",
+    "plot_neuro_fuzzy_adaptation",
     "plot_rule_activation_overview",
     "plot_example_defuzzifications",
     "plot_collision_risk_surface",

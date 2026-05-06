@@ -2,6 +2,10 @@
 
 This project turns an existing hierarchical automotive fuzzy controller into a small 3D classroom-demo simulation.
 
+The demo can also start with an optional Mamdani-compatible neuro-fuzzy adaptation pass.
+This keeps the original Mamdani rule base intact and only tunes rule weights from the
+predefined scenarios before the live session begins.
+
 The fuzzy architecture is preserved exactly as a hierarchy:
 
 1. Collision Risk Engine
@@ -35,6 +39,7 @@ Why Ursina:
   - `ASSISTED`
 - live fuzzy telemetry on screen
 - live top-rule activation panel on screen
+- optional neuro-fuzzy pre-adaptation on startup
 - risk banner and color-coded risk bar
 - brake-light feedback
 - optional debug sensor guide
@@ -109,6 +114,22 @@ If you are already using the parent repository virtual environment, you can reus
 cd adaptive_fuzzy_3d_sim
 python3 main.py
 ```
+
+Run in plain Mamdani mode without neuro-fuzzy startup adaptation:
+
+```bash
+python3 main.py --plain-fuzzy
+```
+
+Tune the startup adaptation pass:
+
+```bash
+python3 main.py --neuro-fuzzy-epochs 6 --neuro-fuzzy-lr 0.04
+```
+
+The 3D startup pass also saves a summary figure under:
+
+- `adaptive_fuzzy_3d_sim/outputs/generated_figures/neuro_fuzzy_adaptation_summary_3d.png`
 
 ## Keyboard Controls
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import asdict
+from pathlib import Path
 from typing import Dict
 
 import numpy as np
@@ -19,6 +20,12 @@ from fuzzy_systems import (
 )
 from hud import SimulationHUD
 from input_controller import InputController
+from neuro_fuzzy_3d import (
+    NeuroFuzzyConfig3D,
+    format_training_report_3d,
+    train_neuro_fuzzy_adapter_3d,
+)
+from neuro_fuzzy_plots_3d import plot_neuro_fuzzy_adaptation_3d
 from scenario_manager import ScenarioManager
 from vehicle import ControlCommand, EgoVehicleState, EnvironmentState, TrafficVehicleState, VehicleVisual
 from world import DrivingWorld
@@ -206,9 +213,19 @@ class SimulationManager:
         "steer_right_hard": "sert sağa kır",
     }
 
-    def __init__(self, config: DemoConfig | None = None) -> None:
+    def __init__(
+        self,
+        config: DemoConfig | None = None,
+        *,
+        use_neuro_fuzzy: bool = True,
+        neuro_fuzzy_epochs: int = 4,
+        neuro_fuzzy_lr: float = 0.05,
+    ) -> None:
         self.config = config or DemoConfig()
         self.controller = FuzzyControllerBridge()
+        self.neuro_fuzzy_enabled = use_neuro_fuzzy
+        self.neuro_fuzzy_report = None
+        self.neuro_fuzzy_plot_path: Path | None = None
         self.scenario_manager = ScenarioManager()
         self.input_controller = InputController()
         self.world = DrivingWorld(self.config)
@@ -226,6 +243,9 @@ class SimulationManager:
         self.dangerous_overtake = False
         self.overtake_state_label = "Yok"
         self.overtake_phase = "idle"
+        self.setup_ego_speed_mps = 0.0
+        self.setup_front_speed_mps = 0.0
+        self.setup_front_gap_m = 0.0
 
         self.ego_visual = VehicleVisual(color.azure, with_brake_lights=True)
         self.front_visual = VehicleVisual(color.orange, with_brake_lights=True, scale_factor=0.96)
@@ -261,6 +281,24 @@ class SimulationManager:
         self.last_fuzzy_controls = {"throttle": 0.0, "brake": 0.0, "steering": 0.0}
         self.last_engine_results = {}
         self.last_applied_command = ControlCommand(0.0, 0.0, 0.0)
+
+        if self.neuro_fuzzy_enabled:
+            self.neuro_fuzzy_report = train_neuro_fuzzy_adapter_3d(
+                self.controller,
+                self.scenario_manager.all(),
+                NeuroFuzzyConfig3D(
+                    epochs=max(1, neuro_fuzzy_epochs),
+                    learning_rate=max(0.001, neuro_fuzzy_lr),
+                ),
+            )
+            print(format_training_report_3d(self.neuro_fuzzy_report))
+            self.neuro_fuzzy_plot_path = plot_neuro_fuzzy_adaptation_3d(
+                self.neuro_fuzzy_report,
+                Path(__file__).resolve().parent / "outputs" / "generated_figures",
+            )
+            print(f"3D nöro-fuzzy grafiği kaydedildi: {self.neuro_fuzzy_plot_path}")
+
+        self._load_setup_from_scenario()
         self.reset_current_scenario()
 
     @property
@@ -316,13 +354,26 @@ class SimulationManager:
         """Select and load the next scenario."""
 
         self.current_scenario = self.scenario_manager.next()
+        self._load_setup_from_scenario()
         self.reset_current_scenario()
 
     def previous_scenario(self) -> None:
         """Select and load the previous scenario."""
 
         self.current_scenario = self.scenario_manager.previous()
+        self._load_setup_from_scenario()
         self.reset_current_scenario()
+
+    def _load_setup_from_scenario(self) -> None:
+        """Load editable setup values from the current scenario defaults."""
+
+        scenario = self.scenario_manager.current()
+        self.setup_ego_speed_mps = scenario.ego_initial.speed_mps
+        self.setup_front_speed_mps = scenario.front_initial.speed_mps
+        self.setup_front_gap_m = max(
+            5.0,
+            scenario.front_initial.forward_z - scenario.ego_initial.forward_z,
+        )
 
     def reset_current_scenario(self) -> None:
         """Reset the scene to the selected scenario's initial state."""
@@ -343,6 +394,9 @@ class SimulationManager:
 
         self.ego_state = EgoVehicleState(**asdict(scenario.ego_initial))
         self.front_state = TrafficVehicleState(**asdict(scenario.front_initial))
+        self.ego_state.speed_mps = self.setup_ego_speed_mps
+        self.front_state.speed_mps = self.setup_front_speed_mps
+        self.front_state.forward_z = self.ego_state.forward_z + self.setup_front_gap_m
         self.oncoming_state = TrafficVehicleState(
             lateral_x=0.0,
             forward_z=self.ego_state.forward_z + self.config.oncoming_spawn_distance_m,
@@ -382,8 +436,65 @@ class SimulationManager:
             self.next_scenario()
         elif key == "b":
             self.previous_scenario()
+        elif key == "1":
+            self._adjust_ego_speed(-1.0)
+        elif key == "2":
+            self._adjust_ego_speed(1.0)
+        elif key == "3":
+            self._adjust_front_speed(-1.0)
+        elif key == "4":
+            self._adjust_front_speed(1.0)
+        elif key == "5":
+            self._adjust_front_gap(-2.0)
+        elif key == "6":
+            self._adjust_front_gap(2.0)
         elif key in {"escape", "q"}:
             self.quit_simulation()
+
+    def _adjust_ego_speed(self, delta: float) -> None:
+        """Change the ego vehicle speed setup and current value."""
+
+        self.setup_ego_speed_mps = _clamp(
+            self.setup_ego_speed_mps + delta,
+            0.0,
+            self.config.max_speed_mps,
+        )
+        if hasattr(self, "ego_state"):
+            self.ego_state.speed_mps = self.setup_ego_speed_mps
+        self.last_warning_message = (
+            f"Ego araç hızı {self.setup_ego_speed_mps:.1f} m/s olarak ayarlandı."
+        )
+        self._refresh_hud()
+
+    def _adjust_front_speed(self, delta: float) -> None:
+        """Change the front vehicle speed setup and current value."""
+
+        self.setup_front_speed_mps = _clamp(
+            self.setup_front_speed_mps + delta,
+            0.0,
+            self.config.max_speed_mps,
+        )
+        if hasattr(self, "front_state"):
+            self.front_state.speed_mps = self.setup_front_speed_mps
+        self.last_warning_message = (
+            f"Ön araç hızı {self.setup_front_speed_mps:.1f} m/s olarak ayarlandı."
+        )
+        self._refresh_hud()
+
+    def _adjust_front_gap(self, delta: float) -> None:
+        """Change the front vehicle gap setup and current spacing."""
+
+        self.setup_front_gap_m = _clamp(
+            self.setup_front_gap_m + delta,
+            5.0,
+            120.0,
+        )
+        if hasattr(self, "front_state") and hasattr(self, "ego_state"):
+            self.front_state.forward_z = self.ego_state.forward_z + self.setup_front_gap_m
+        self.last_warning_message = (
+            f"Ön araç mesafesi {self.setup_front_gap_m:.1f} m olarak ayarlandı."
+        )
+        self._refresh_hud()
 
     def update(self, dt: float) -> None:
         """Advance the live simulation by one frame."""
@@ -817,7 +928,8 @@ class SimulationManager:
         return "HAZIR"
 
     def _telemetry_lines(self) -> list[str]:
-        return [
+        lines = [
+            f"Ayar Ego {self.setup_ego_speed_mps:4.1f} | Ön {self.setup_front_speed_mps:4.1f} | Mesafe {self.setup_front_gap_m:4.1f}",
             f"Hız {self.ego_state.speed_mps:4.1f} m/s | Ön {self._front_distance():4.1f} m",
             f"Ofset {self.ego_state.lateral_x:4.2f} m | Risk {self.last_fuzzy_subsystems['risk']:5.1f}",
             f"Şerit {self.last_fuzzy_subsystems['lane']:5.1f} | Konfor {self.last_fuzzy_subsystems['comfort']:5.1f}",
@@ -825,6 +937,14 @@ class SimulationManager:
             f"Karşı {self._oncoming_distance():4.1f} m | Sollama {self.overtake_state_label}",
             f"Yol {self.environment_state.road_condition:4.2f} | Eğim {self.environment_state.slope:4.1f} | Trafik {self.environment_state.traffic_density:4.2f}",
         ]
+        if self.neuro_fuzzy_enabled:
+            loss_text = "hazır"
+            if self.neuro_fuzzy_report is not None:
+                loss_text = f"{self.neuro_fuzzy_report.adapted_loss:.3f}"
+            lines.append(f"Nöro-Fuzzy Açık | Kayıp {loss_text}")
+        else:
+            lines.append("Nöro-Fuzzy Kapalı | Saf Mamdani")
+        return lines
 
     def _pretty_antecedent(self, antecedent_key: str) -> str:
         """Convert one antecedent key into a readable Turkish phrase."""

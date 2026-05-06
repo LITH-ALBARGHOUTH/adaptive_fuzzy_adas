@@ -197,7 +197,7 @@ class SimulationHUD:
         )
         self.help_text = Text(
             parent=camera.ui,
-            text="Kısayollar: W/S gaz-fren | A/D direksiyon | Space başlat-duraklat\nR sıfırla | Tab mod | C kamera | N/B senaryo | Esc/Q çıkış",
+            text="Kısayollar: W/S gaz-fren | A/D direksiyon | 1/2 ego hız | 3/4 ön hız | 5/6 ön mesafe\nSpace başlat-duraklat | R sıfırla | Tab mod | C kamera | N/B senaryo | Esc/Q çıkış",
             origin=(0.0, 0.0),
             position=(0.0, -0.47),
             scale=0.66,

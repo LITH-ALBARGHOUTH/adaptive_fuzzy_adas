@@ -9,6 +9,10 @@ The fuzzy hierarchy remains unchanged:
 3. Comfort / Efficiency Engine
 4. Meta Decision Engine
 
+An optional Mamdani-compatible neuro-fuzzy adaptation pass can be enabled from the CLI.
+This does not replace the Mamdani rule base. Instead, it learns scenario-informed rule
+weights on top of the existing hierarchical design.
+
 The work in this repository focuses on simulation, scenario management, CLI execution, logging, summaries, and matplotlib-based visualization.
 
 ## What The Simulation Does
@@ -89,6 +93,22 @@ Run scenarios without saving plots:
 ```bash
 python3 main.py --skip-plots
 ```
+
+Run the Mamdani-compatible neuro-fuzzy adaptation before simulation:
+
+```bash
+python3 main.py --neuro-fuzzy
+```
+
+Tune the number of learning epochs:
+
+```bash
+python3 main.py --neuro-fuzzy --neuro-fuzzy-epochs 10 --neuro-fuzzy-lr 0.05
+```
+
+When plotting is enabled, the neuro-fuzzy run also saves:
+
+- `outputs/generated_figures/neuro_fuzzy_adaptation_summary.png`
 
 Run the required interactive one-shot evaluation mode:
 
@@ -187,5 +207,6 @@ pip install -r requirements.txt
 ## Notes
 
 - The fuzzy engines are intentionally kept hierarchical and separate.
+- The optional neuro-fuzzy layer is Mamdani-compatible and only adapts rule weights; it does not convert the system to Sugeno or ANFIS.
 - The simulation layer converts ego speed from m/s to km/h before calling the existing fuzzy engines because their universes are defined in automotive km/h ranges.
 - The project is written to stay simple, explainable, and runnable in a university-project setting.

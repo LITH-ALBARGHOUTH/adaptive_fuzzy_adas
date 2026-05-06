@@ -20,6 +20,11 @@ class ScenarioManager:
 
         return list(self._names)
 
+    def all(self) -> List[ScenarioDefinition]:
+        """Return every scenario definition."""
+
+        return [self._scenarios[name] for name in self._names]
+
     def current(self) -> ScenarioDefinition:
         """Return the currently selected scenario."""
 

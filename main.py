@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Sequence
 
 from config import get_default_fuzzy_config, get_default_plot_config, get_default_simulation_config
+from neuro_fuzzy import NeuroFuzzyConfig, format_training_report, train_neuro_fuzzy_adapter
 from scenarios import get_predefined_scenarios
 from simulation import HierarchicalFuzzyADASController, run_simulation
 from utils import ensure_directory, print_scenario_report, select_representative_record
@@ -14,6 +15,7 @@ from visualization.architecture_plot import plot_system_architecture_diagram
 from visualization.defuzzification_plot import plot_example_defuzzifications
 from visualization.live_simulation import show_live_simulation
 from visualization.membership_plots import plot_all_memberships, plot_membership_sensitivity
+from visualization.neuro_fuzzy_plots import plot_neuro_fuzzy_adaptation
 from visualization.rule_activation import plot_rule_activation_overview
 from visualization.scenario_plots import plot_scenario_comparison, plot_scenario_timeseries
 from visualization.surface_plots import plot_collision_risk_surface, plot_meta_brake_contour
@@ -50,6 +52,23 @@ def build_argument_parser(scenario_names: Sequence[str]) -> argparse.ArgumentPar
         "--output-dir",
         default="outputs/generated_figures",
         help="Directory for saved figures.",
+    )
+    parser.add_argument(
+        "--neuro-fuzzy",
+        action="store_true",
+        help="Adapt Mamdani rule weights with a Mamdani-compatible neuro-fuzzy pass before simulation.",
+    )
+    parser.add_argument(
+        "--neuro-fuzzy-epochs",
+        type=int,
+        default=6,
+        help="Number of adaptation epochs to use when --neuro-fuzzy is enabled.",
+    )
+    parser.add_argument(
+        "--neuro-fuzzy-lr",
+        type=float,
+        default=0.08,
+        help="Learning rate for the Mamdani-compatible neuro-fuzzy weight adaptation.",
     )
     return parser
 
@@ -118,6 +137,19 @@ def main() -> None:
     plot_config = get_default_plot_config()
     simulation_config = get_default_simulation_config()
     results = {}
+    training_report = None
+
+    if args.neuro_fuzzy:
+        training_report = train_neuro_fuzzy_adapter(
+            controller=controller,
+            scenarios=scenarios.values(),
+            simulation_config=simulation_config,
+            config=NeuroFuzzyConfig(
+                epochs=max(1, args.neuro_fuzzy_epochs),
+                learning_rate=max(0.001, args.neuro_fuzzy_lr),
+            ),
+        )
+        print(format_training_report(training_report))
 
     for scenario_name in selected_names:
         result = run_simulation(
@@ -143,6 +175,8 @@ def main() -> None:
         plot_collision_risk_surface(controller, output_dir, plot_config)
         plot_meta_brake_contour(controller, output_dir, plot_config)
         plot_membership_sensitivity(fuzzy_config, output_dir, plot_config)
+        if training_report is not None:
+            plot_neuro_fuzzy_adaptation(training_report, output_dir, plot_config)
 
     if not args.no_live and len(results) == 1:
         only_result = next(iter(results.values()))
